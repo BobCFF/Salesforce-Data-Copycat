@@ -93,7 +93,7 @@ export default function CopyPanel({
         </label>
 
         <button className="btn primary block" onClick={run} disabled={!canRun}>
-          {copying ? 'Copying…' : `Copy ${sourceObject || ''} → ${effectiveTarget || 'target'}`}
+          {copying ? '⧗ Copying…' : `⧉ Copy ${sourceObject || ''} → ${effectiveTarget || 'target'}`}
         </button>
       </div>
 

@@ -40,6 +40,10 @@ export default function App() {
   // (center) flexes to fill the remaining space.
   const [panelW, setPanelW] = useState({ tree: 240, qb: 300, copy: 280 });
 
+  // When true, the results section is docked as a full-width bottom row that
+  // spans beneath the other three sections instead of being the center column.
+  const [dockBottom, setDockBottom] = useState(false);
+
   // sign +1: panel is left of the splitter (drag right → wider);
   // sign -1: panel is right of the splitter (drag right → narrower).
   function startPanelResize(e, key, sign) {
@@ -238,10 +242,17 @@ export default function App() {
       )}
 
       <div
-        className="explorer"
-        style={{
-          gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
-        }}
+        className={`explorer${dockBottom ? ' dock-bottom' : ''}`}
+        style={
+          dockBottom
+            ? {
+                gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr)`,
+                gridTemplateRows: 'minmax(0, 1fr) minmax(160px, 42%)',
+              }
+            : {
+                gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
+              }
+        }
       >
         <aside className="col tree-col">
           <ObjectTree
@@ -254,7 +265,7 @@ export default function App() {
         </aside>
 
         <div
-          className="col-splitter"
+          className="col-splitter split-tree"
           title="Drag to resize"
           onMouseDown={(e) => startPanelResize(e, 'tree', 1)}
         />
@@ -273,7 +284,7 @@ export default function App() {
         </section>
 
         <div
-          className="col-splitter"
+          className="col-splitter split-qb"
           title="Drag to resize"
           onMouseDown={(e) => startPanelResize(e, 'qb', 1)}
         />
@@ -289,12 +300,20 @@ export default function App() {
                 {queryResult.bulk ? ' • Bulk API' : ''}
               </span>
             )}
+            <span className="spacer" />
+            <button
+              className="btn small"
+              onClick={() => setDockBottom((d) => !d)}
+              title={dockBottom ? 'Dock results as the right-hand column' : 'Dock results to the bottom, spanning all sections'}
+            >
+              {dockBottom ? '⤒ Dock to side' : '⤓ Dock to bottom'}
+            </button>
           </div>
           <DataGrid columns={columns} records={queryResult?.records || []} />
         </main>
 
         <div
-          className="col-splitter"
+          className="col-splitter split-copy"
           title="Drag to resize"
           onMouseDown={(e) => startPanelResize(e, 'copy', -1)}
         />
