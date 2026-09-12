@@ -72,6 +72,7 @@ body {
   padding: 0 4px;
 }
 .conn-card {
+  position: relative;
   flex: 1;
   background: var(--pane);
   border: 1px solid var(--border);
@@ -80,6 +81,7 @@ body {
   min-width: 0;
 }
 .conn-card.connected { border-color: var(--ok); }
+.disconnect-btn { position: absolute; top: 8px; right: 10px; }
 .conn-title {
   font-weight: 600;
   display: flex;
@@ -248,13 +250,51 @@ body {
 .data-grid { border-collapse: collapse; width: 100%; font-size: 12px; }
 .data-grid th, .data-grid td {
   border: 1px solid #e2e2e2; padding: 3px 8px; text-align: left;
-  white-space: nowrap; max-width: 360px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Header cells drop their padding (th-inner supplies it) and stay the
+   containing block for the resizer/menu via their sticky positioning. */
+.data-grid.resizable thead th { padding: 0; }
 .data-grid thead th {
   position: sticky; top: 0;
   background: linear-gradient(to bottom, #fbfbfb, var(--chrome));
-  cursor: pointer; user-select: none; z-index: 2;
+  user-select: none; z-index: 2;
 }
+/* Header inner layout: grip (sort/drag) on the left, ⋯ menu on the right. */
+.th-inner { display: flex; align-items: center; gap: 2px; padding: 3px 6px 3px 8px; }
+.th-grip {
+  flex: 1; display: flex; align-items: center; min-width: 0;
+  cursor: pointer; overflow: hidden;
+}
+.th-grip:active { cursor: grabbing; }
+.th-label { overflow: hidden; text-overflow: ellipsis; }
+.data-grid thead th.dragging { background: var(--accent-soft); opacity: 0.75; }
+.th-menu-btn {
+  flex: none; border: none; background: transparent; cursor: pointer;
+  color: var(--muted); font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 2px;
+}
+.th-menu-btn:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+/* Resize handle on the right edge of each header cell. */
+.col-resizer {
+  position: absolute; top: 0; right: 0; width: 6px; height: 100%;
+  cursor: col-resize; z-index: 3; user-select: none;
+}
+.col-resizer:hover { background: var(--accent); opacity: 0.4; }
+/* Per-column dropdown menu. */
+.col-menu {
+  position: absolute; top: 100%; right: 0; z-index: 20;
+  background: #fff; border: 1px solid var(--border-dark); border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2); min-width: 150px; padding: 3px;
+}
+.col-menu button {
+  display: block; width: 100%; text-align: left; border: none; background: none;
+  font: inherit; padding: 5px 10px; cursor: pointer; border-radius: 2px; color: var(--text);
+}
+.col-menu button:hover { background: var(--accent-soft); }
+.col-menu button.danger { color: var(--fail); }
+.col-menu-sep { height: 1px; background: var(--chrome-dark); margin: 3px 0; }
+.col-menu-backdrop { position: fixed; inset: 0; z-index: 15; }
+.restore-cols { margin-left: 10px; }
 .data-grid thead tr.filter-row th { top: 24px; padding: 1px 2px; }
 .data-grid thead tr.filter-row input {
   width: 100%; border: 1px solid var(--border); border-radius: 2px; padding: 1px 4px; font: inherit;
