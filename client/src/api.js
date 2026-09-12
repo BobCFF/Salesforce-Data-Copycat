@@ -27,6 +27,10 @@ export const api = {
   disconnect: (side) => request('POST', `/api/disconnect/${side}`),
   logout: () => request('POST', '/api/disconnect'),
 
+  getOAuthConfig: () => request('GET', '/api/oauth/config'),
+  setOAuthConfig: (payload) => request('POST', '/api/oauth/config', payload),
+  clearOAuthConfig: () => request('POST', '/api/oauth/config/clear'),
+
   objects: (side) => request('GET', `/api/${side}/objects`),
   describe: (side, name) => request('GET', `/api/${side}/objects/${name}/describe`),
   query: (side, selection) => request('POST', `/api/${side}/query`, selection),
