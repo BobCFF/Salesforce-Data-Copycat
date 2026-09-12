@@ -7,6 +7,7 @@ import QueryBuilder from './components/QueryBuilder.jsx';
 import DataGrid from './components/DataGrid.jsx';
 import CopyPanel from './components/CopyPanel.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
+import OAuthSettings from './components/OAuthSettings.jsx';
 
 const DEFAULT_SELECTION = {
   sobject: '',
@@ -48,6 +49,7 @@ export default function App() {
   // Height (px) of the docked results row; drag-adjustable.
   const [bottomH, setBottomH] = usePersistedState('sfcopycat.bottomH', 300);
   const [showExport, setShowExport] = useState(false);
+  const [showOAuth, setShowOAuth] = useState(false);
 
   function startBottomResize(e) {
     e.preventDefault();
@@ -236,6 +238,9 @@ export default function App() {
           <span className="app-icon">🗂️</span> Salesforce Data Copycat
         </div>
         <div className="titlebar-actions">
+          <button className="btn small" onClick={() => setShowOAuth(true)} title="Configure Salesforce OAuth (Connected App)">
+            ⚙ OAuth
+          </button>
           {(sourceConnected || targetConnected) && (
             <button className="btn small" onClick={logout}>Log out all</button>
           )}
@@ -387,6 +392,10 @@ export default function App() {
           records={queryResult?.records || []}
           onClose={() => setShowExport(false)}
         />
+      )}
+
+      {showOAuth && (
+        <OAuthSettings onClose={() => setShowOAuth(false)} onChange={refreshStatus} />
       )}
     </div>
   );

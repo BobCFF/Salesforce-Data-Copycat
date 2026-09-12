@@ -374,6 +374,18 @@ body {
 .export-col span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 640px) { .export-cols { grid-template-columns: 1fr; } }
 
+/* ---------- OAuth settings modal ---------- */
+.oauth-note { font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
+.oauth-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; font-size: 12px; font-weight: 600; }
+.oauth-field input {
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 2px; font: inherit; font-weight: normal;
+}
+.oauth-hint { font-size: 11px; color: var(--muted); margin: -4px 0 0; }
+.oauth-hint code {
+  background: var(--chrome); padding: 1px 4px; border-radius: 2px;
+  font-family: Consolas, "Courier New", monospace;
+}
+
 /* ---------- Copy panel ---------- */
 .copy-panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .copy-note, .copy-form { padding: 8px; }

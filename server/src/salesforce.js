@@ -19,17 +19,20 @@ import config from './config.js';
  * @param {StoredCredentials} creds
  */
 export function connectionFromCredentials(creds) {
+  // OAuth config for token refresh: prefer the config stored with the
+  // connection (session-configured Connected App), else fall back to env vars.
+  const oauthApp = creds.oauth || (config.oauthEnabled ? config.oauth : null);
   return new jsforce.Connection({
     instanceUrl: creds.instanceUrl,
     accessToken: creds.accessToken,
     refreshToken: creds.refreshToken,
     loginUrl: creds.loginUrl,
     version: config.apiVersion,
-    oauth2: config.oauthEnabled
+    oauth2: oauthApp
       ? {
-          clientId: config.oauth.clientId,
-          clientSecret: config.oauth.clientSecret,
-          redirectUri: config.oauth.redirectUri,
+          clientId: oauthApp.clientId,
+          clientSecret: oauthApp.clientSecret,
+          redirectUri: oauthApp.redirectUri,
         }
       : undefined,
   });
