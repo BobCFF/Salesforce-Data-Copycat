@@ -159,6 +159,17 @@ body {
   border-right: 1px solid var(--border-light);
 }
 .col-splitter:hover { background: var(--accent); }
+/* Docked-bottom layout: the three sections sit on the top row, and the results
+   section spans the full width as a bottom row. */
+.explorer.dock-bottom > .tree-col { grid-row: 1; grid-column: 1; }
+.explorer.dock-bottom > .split-tree { grid-row: 1; grid-column: 2; }
+.explorer.dock-bottom > .qb-col { grid-row: 1; grid-column: 3; }
+.explorer.dock-bottom > .split-qb { grid-row: 1; grid-column: 4; }
+.explorer.dock-bottom > .copy-col { grid-row: 1; grid-column: 5; border-right: none; }
+.explorer.dock-bottom > .grid-col {
+  grid-row: 2; grid-column: 1 / -1; border-top: 1px solid var(--border-dark);
+}
+.explorer.dock-bottom > .split-copy { display: none; }
 .col {
   display: flex;
   flex-direction: column;
@@ -350,9 +361,12 @@ body {
    (from the drag-resize state) is overridden with !important here, and the
    drag splitters are hidden. */
 @media (max-width: 1100px) {
-  .explorer { grid-template-columns: 200px 1fr !important; grid-auto-rows: minmax(0, 1fr); }
+  .explorer { grid-template-columns: 200px 1fr !important; grid-template-rows: none !important; grid-auto-rows: minmax(0, 1fr); }
   .col-splitter { display: none; }
   .copy-col { grid-column: 1 / -1; border-top: 1px solid var(--border-dark); max-height: 260px; }
+  /* Neutralize docked-bottom placement so narrow screens stack normally. */
+  .explorer.dock-bottom > * { grid-row: auto; grid-column: auto; }
+  .explorer.dock-bottom > .copy-col { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) {
   .connbar { flex-direction: column; }
