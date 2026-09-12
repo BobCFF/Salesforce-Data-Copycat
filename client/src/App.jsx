@@ -36,6 +36,30 @@ export default function App() {
 
   const [error, setError] = useState('');
 
+  // Adjustable widths (px) for the Explorer side panels; the results column
+  // (center) flexes to fill the remaining space.
+  const [panelW, setPanelW] = useState({ tree: 240, qb: 300, copy: 280 });
+
+  // sign +1: panel is left of the splitter (drag right → wider);
+  // sign -1: panel is right of the splitter (drag right → narrower).
+  function startPanelResize(e, key, sign) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelW[key];
+    function move(ev) {
+      const w = Math.max(140, startW + sign * (ev.clientX - startX));
+      setPanelW((p) => ({ ...p, [key]: w }));
+    }
+    function up() {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+    }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+    document.body.style.cursor = 'col-resize';
+  }
+
   const sourceConnected = status?.source?.connected;
   const targetConnected = status?.target?.connected;
 
@@ -213,7 +237,12 @@ export default function App() {
         </div>
       )}
 
-      <div className="explorer">
+      <div
+        className="explorer"
+        style={{
+          gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
+        }}
+      >
         <aside className="col tree-col">
           <ObjectTree
             title="Source Objects"
@@ -223,6 +252,12 @@ export default function App() {
             onSelect={selectObject}
           />
         </aside>
+
+        <div
+          className="col-splitter"
+          title="Drag to resize"
+          onMouseDown={(e) => startPanelResize(e, 'tree', 1)}
+        />
 
         <section className="col qb-col">
           <div className="pane-header">
@@ -236,6 +271,12 @@ export default function App() {
             soqlPreview={soqlPreview}
           />
         </section>
+
+        <div
+          className="col-splitter"
+          title="Drag to resize"
+          onMouseDown={(e) => startPanelResize(e, 'qb', 1)}
+        />
 
         <main className="col grid-col">
           <div className="toolbar">
@@ -251,6 +292,12 @@ export default function App() {
           </div>
           <DataGrid columns={columns} records={queryResult?.records || []} />
         </main>
+
+        <div
+          className="col-splitter"
+          title="Drag to resize"
+          onMouseDown={(e) => startPanelResize(e, 'copy', -1)}
+        />
 
         <aside className="col copy-col">
           <CopyPanel

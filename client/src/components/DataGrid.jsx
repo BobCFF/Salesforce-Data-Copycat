@@ -120,7 +120,11 @@ export default function DataGrid({ columns, records }) {
           <thead>
             <tr>
               {visible.map((c) => (
-                <th key={c} className={dragCol === c ? 'dragging' : ''}>
+                <th
+                  key={c}
+                  className={dragCol === c ? 'dragging' : ''}
+                  style={menuCol === c ? { zIndex: 30 } : undefined}
+                >
                   <div className="th-inner">
                     <span
                       className="th-grip"
