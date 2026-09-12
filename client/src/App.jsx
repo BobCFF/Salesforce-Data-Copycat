@@ -6,6 +6,7 @@ import ObjectTree from './components/ObjectTree.jsx';
 import QueryBuilder from './components/QueryBuilder.jsx';
 import DataGrid from './components/DataGrid.jsx';
 import CopyPanel from './components/CopyPanel.jsx';
+import ExportDialog from './components/ExportDialog.jsx';
 
 const DEFAULT_SELECTION = {
   sobject: '',
@@ -46,6 +47,7 @@ export default function App() {
   const [dockBottom, setDockBottom] = usePersistedState('sfcopycat.dockBottom', false);
   // Height (px) of the docked results row; drag-adjustable.
   const [bottomH, setBottomH] = usePersistedState('sfcopycat.bottomH', 300);
+  const [showExport, setShowExport] = useState(false);
 
   function startBottomResize(e) {
     e.preventDefault();
@@ -325,6 +327,14 @@ export default function App() {
             <span className="spacer" />
             <button
               className="btn small"
+              onClick={() => setShowExport(true)}
+              disabled={!queryResult?.records?.length}
+              title="Export the current results to CSV or JSON"
+            >
+              ⬇ Export
+            </button>
+            <button
+              className="btn small"
               onClick={() => setDockBottom((d) => !d)}
               title={dockBottom ? 'Dock results as the right-hand column' : 'Dock results to the bottom, spanning all sections'}
             >
@@ -369,6 +379,15 @@ export default function App() {
         <span className="spacer" />
         <span>{selectedObject ? `${selection.fields.length} fields selected` : 'No object selected'}</span>
       </footer>
+
+      {showExport && (
+        <ExportDialog
+          sobject={selectedObject}
+          columns={columns}
+          records={queryResult?.records || []}
+          onClose={() => setShowExport(false)}
+        />
+      )}
     </div>
   );
 }

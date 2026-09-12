@@ -27,6 +27,12 @@ export function clearCredentials(req, side) {
 /**
  * Build a live jsforce Connection for a side, or throw a 400-style error if
  * the side is not connected.
+ *
+ * When OAuth is configured and a refresh token is present, jsforce transparently
+ * refreshes an expired access token and emits a "refresh" event; we capture the
+ * new token into the session credentials and flag the request so the session is
+ * re-saved (see maybeSaveRefreshed) — keeping the connection alive without a
+ * re-login.
  */
 export function requireConnection(req, side) {
   if (!isValidSide(side)) {
@@ -40,7 +46,26 @@ export function requireConnection(req, side) {
     err.status = 401;
     throw err;
   }
-  return connectionFromCredentials(creds);
+  const conn = connectionFromCredentials(creds);
+  conn.on('refresh', (accessToken) => {
+    const current = req.session?.orgs?.[side];
+    if (current && accessToken) {
+      current.accessToken = accessToken;
+      req.__sessionRefreshed = true;
+    }
+  });
+  return conn;
+}
+
+/**
+ * If a token refresh updated the session during this request, persist it.
+ * Must run before the response headers are sent (writes Set-Cookie).
+ */
+export async function maybeSaveRefreshed(req) {
+  if (req.__sessionRefreshed) {
+    req.__sessionRefreshed = false;
+    await req.session.save();
+  }
 }
 
 /**
