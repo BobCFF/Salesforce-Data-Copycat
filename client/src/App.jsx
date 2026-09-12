@@ -43,6 +43,27 @@ export default function App() {
   // When true, the results section is docked as a full-width bottom row that
   // spans beneath the other three sections instead of being the center column.
   const [dockBottom, setDockBottom] = useState(false);
+  // Height (px) of the docked results row; drag-adjustable.
+  const [bottomH, setBottomH] = useState(300);
+
+  function startBottomResize(e) {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = bottomH;
+    function move(ev) {
+      // Dragging up grows the bottom row.
+      const h = Math.max(120, startH - (ev.clientY - startY));
+      setBottomH(h);
+    }
+    function up() {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+    }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+    document.body.style.cursor = 'row-resize';
+  }
 
   // sign +1: panel is left of the splitter (drag right → wider);
   // sign -1: panel is right of the splitter (drag right → narrower).
@@ -247,7 +268,7 @@ export default function App() {
           dockBottom
             ? {
                 gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr)`,
-                gridTemplateRows: 'minmax(0, 1fr) minmax(160px, 42%)',
+                gridTemplateRows: `minmax(0, 1fr) 6px ${bottomH}px`,
               }
             : {
                 gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
@@ -331,6 +352,14 @@ export default function App() {
             result={copyResult}
           />
         </aside>
+
+        {dockBottom && (
+          <div
+            className="row-splitter"
+            title="Drag to resize the results height"
+            onMouseDown={startBottomResize}
+          />
+        )}
       </div>
 
       <footer className="statusbar">
