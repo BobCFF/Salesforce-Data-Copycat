@@ -331,7 +331,7 @@ export default function App() {
               {dockBottom ? '⤒ Dock to side' : '⤓ Dock to bottom'}
             </button>
           </div>
-          <DataGrid columns={columns} records={queryResult?.records || []} />
+          <DataGrid sobject={selectedObject} columns={columns} records={queryResult?.records || []} />
         </main>
 
         <div

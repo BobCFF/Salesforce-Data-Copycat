@@ -8,29 +8,46 @@ const MIN_COL_WIDTH = 60;
 // resizable and reorderable columns and a per-column ⋯ menu (sort / remove).
 // Sorting and filtering here are client-side over the fetched result set;
 // server-side SOQL WHERE / ORDER BY is handled separately by the query builder.
-export default function DataGrid({ columns, records }) {
+export default function DataGrid({ sobject, columns, records }) {
   const [sort, setSort] = useState({ field: null, dir: 'asc' });
   const [filters, setFilters] = useState({});
   const [order, setOrder] = useState(columns);
   const [hidden, setHidden] = useState([]);
-  // Column widths are keyed by column name and persist across queries/refreshes.
+  // Column widths (by column name) and per-object column order / hidden columns
+  // are persisted across queries and refreshes.
   const [widths, setWidths] = usePersistedState('sfcopycat.colWidths', {});
+  const [orderMap, setOrderMap] = usePersistedState('sfcopycat.colOrder', {});
+  const [hiddenMap, setHiddenMap] = usePersistedState('sfcopycat.colHidden', {});
   const [menuCol, setMenuCol] = useState(null);
   const [dragCol, setDragCol] = useState(null);
 
-  // Re-sync internal column state when a new query changes the column set.
+  const objKey = sobject || '_';
+
+  // Re-sync when the object or the column set changes: apply the saved order
+  // for this object (keeping its relative order, appending new columns, and
+  // dropping ones no longer present) and the saved hidden columns.
   const columnsKey = columns.join('|');
   useEffect(() => {
-    setOrder(columns);
-    setHidden([]);
+    setOrder(reconcileOrder(orderMap[objKey], columns));
+    setHidden((hiddenMap[objKey] || []).filter((c) => columns.includes(c)));
     setMenuCol(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnsKey]);
+  }, [objKey, columnsKey]);
 
   const visible = useMemo(
     () => order.filter((c) => columns.includes(c) && !hidden.includes(c)),
     [order, columns, hidden]
   );
+
+  // Update local state and persist it for the current object.
+  function applyOrder(next) {
+    setOrder(next);
+    setOrderMap((m) => ({ ...m, [objKey]: next }));
+  }
+  function applyHidden(next) {
+    setHidden(next);
+    setHiddenMap((m) => ({ ...m, [objKey]: next }));
+  }
 
   function toggleSort(field) {
     setSort((s) => {
@@ -41,11 +58,11 @@ export default function DataGrid({ columns, records }) {
   }
 
   function removeColumn(col) {
-    setHidden((h) => [...h, col]);
+    applyHidden([...hidden, col]);
     setMenuCol(null);
   }
   function restoreColumns() {
-    setHidden([]);
+    applyHidden([]);
   }
 
   // --- column resize ---
@@ -68,16 +85,16 @@ export default function DataGrid({ columns, records }) {
 
   // --- column reorder (drag & drop) ---
   function onDrop(targetCol) {
-    setOrder((prev) => {
-      if (!dragCol || dragCol === targetCol) return prev;
-      const arr = [...prev];
+    if (dragCol && dragCol !== targetCol) {
+      const arr = [...order];
       const from = arr.indexOf(dragCol);
       const to = arr.indexOf(targetCol);
-      if (from === -1 || to === -1) return prev;
-      arr.splice(from, 1);
-      arr.splice(to, 0, dragCol);
-      return arr;
-    });
+      if (from !== -1 && to !== -1) {
+        arr.splice(from, 1);
+        arr.splice(to, 0, dragCol);
+        applyOrder(arr);
+      }
+    }
     setDragCol(null);
   }
 
@@ -213,6 +230,15 @@ export default function DataGrid({ columns, records }) {
       {menuCol && <div className="col-menu-backdrop" onClick={() => setMenuCol(null)} />}
     </div>
   );
+}
+
+// Merge a saved column order with the current columns: keep saved columns that
+// still exist (in their saved order), then append any new columns at the end.
+function reconcileOrder(saved, columns) {
+  if (!Array.isArray(saved) || !saved.length) return columns;
+  const known = saved.filter((c) => columns.includes(c));
+  const extra = columns.filter((c) => !known.includes(c));
+  return [...known, ...extra];
 }
 
 // Flatten one level of relationship objects (e.g. Account.Name) for display.
