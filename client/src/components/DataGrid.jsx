@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { usePersistedState } from '../usePersistedState.js';
 
 const DEFAULT_COL_WIDTH = 160;
 const MIN_COL_WIDTH = 60;
@@ -12,7 +13,8 @@ export default function DataGrid({ columns, records }) {
   const [filters, setFilters] = useState({});
   const [order, setOrder] = useState(columns);
   const [hidden, setHidden] = useState([]);
-  const [widths, setWidths] = useState({});
+  // Column widths are keyed by column name and persist across queries/refreshes.
+  const [widths, setWidths] = usePersistedState('sfcopycat.colWidths', {});
   const [menuCol, setMenuCol] = useState(null);
   const [dragCol, setDragCol] = useState(null);
 

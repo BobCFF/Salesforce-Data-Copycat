@@ -366,19 +366,57 @@ body {
 .statusbar > span { border-right: 1px solid var(--border-dark); padding-right: 16px; }
 .statusbar > span:last-child, .statusbar > .spacer { border-right: none; }
 
-/* Responsive: stack columns on narrow screens. The inline grid-template
-   (from the drag-resize state) is overridden with !important here, and the
-   drag splitters are hidden. */
-@media (max-width: 1100px) {
-  .explorer { grid-template-columns: 200px 1fr !important; grid-template-rows: none !important; grid-auto-rows: minmax(0, 1fr); }
+/* ---------------------------------------------------------------------------
+   Responsive layout
+   --------------------------------------------------------------------------- */
+
+/* Medium widths: drop to a 2-column Explorer grid so panels aren't too narrow.
+   The inline grid-template (from the drag-resize state) is overridden here. */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .explorer {
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 1.6fr) !important;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
   .col-splitter, .row-splitter { display: none; }
-  .copy-col { grid-column: 1 / -1; border-top: 1px solid var(--border-dark); max-height: 260px; }
-  /* Neutralize docked-bottom placement so narrow screens stack normally. */
+  .tree-col { grid-row: 1; grid-column: 1; }
+  .qb-col   { grid-row: 2; grid-column: 1; border-top: 1px solid var(--border-dark); }
+  .grid-col { grid-row: 1; grid-column: 2; }
+  .copy-col { grid-row: 2; grid-column: 2; border-top: 1px solid var(--border-dark); border-right: none; }
+  /* Neutralize docked-bottom placement at this width. */
   .explorer.dock-bottom > * { grid-row: auto; grid-column: auto; }
-  .explorer.dock-bottom > .copy-col { grid-column: 1 / -1; }
 }
-@media (max-width: 700px) {
-  .connbar { flex-direction: column; }
-  .copy-arrow { transform: rotate(90deg); }
-  .explorer { grid-template-columns: 1fr !important; }
+
+/* Narrow / mobile: stack every section vertically and let the Explorer scroll
+   as one column. Drag splitters and the desktop dock modes don't apply. */
+@media (max-width: 900px) {
+  .explorer {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .col {
+    flex: none;
+    min-height: 300px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-dark);
+  }
+  .col:last-child { border-bottom: none; }
+  .col-splitter, .row-splitter { display: none; }
+  .explorer.dock-bottom > * { grid-row: auto; grid-column: auto; }
+  .toolbar { flex-wrap: wrap; }
+  .statusbar { flex-wrap: wrap; gap: 6px 14px; }
+}
+
+/* Phone: stack the two connection cards and tidy the chrome. */
+@media (max-width: 640px) {
+  .connbar { flex-direction: column; gap: 8px; }
+  .copy-arrow { transform: rotate(90deg); padding: 0; align-self: center; }
+  .titlebar { flex-wrap: wrap; gap: 4px 8px; }
+  .col { min-height: 260px; }
+  .field-list { max-height: 180px; }
+  /* Larger touch targets. */
+  .btn { padding: 6px 12px; }
+  .conn-form input, .conn-form select { padding: 6px 8px; }
+  .disconnect-btn { position: static; margin-top: 6px; }
 }

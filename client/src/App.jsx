@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
+import { usePersistedState } from './usePersistedState.js';
 import ConnectionPanel from './components/ConnectionPanel.jsx';
 import ObjectTree from './components/ObjectTree.jsx';
 import QueryBuilder from './components/QueryBuilder.jsx';
@@ -37,14 +38,14 @@ export default function App() {
   const [error, setError] = useState('');
 
   // Adjustable widths (px) for the Explorer side panels; the results column
-  // (center) flexes to fill the remaining space.
-  const [panelW, setPanelW] = useState({ tree: 240, qb: 300, copy: 280 });
+  // (center) flexes to fill the remaining space. Persisted across refreshes.
+  const [panelW, setPanelW] = usePersistedState('sfcopycat.panelW', { tree: 240, qb: 300, copy: 280 });
 
   // When true, the results section is docked as a full-width bottom row that
   // spans beneath the other three sections instead of being the center column.
-  const [dockBottom, setDockBottom] = useState(false);
+  const [dockBottom, setDockBottom] = usePersistedState('sfcopycat.dockBottom', false);
   // Height (px) of the docked results row; drag-adjustable.
-  const [bottomH, setBottomH] = useState(300);
+  const [bottomH, setBottomH] = usePersistedState('sfcopycat.bottomH', 300);
 
   function startBottomResize(e) {
     e.preventDefault();
