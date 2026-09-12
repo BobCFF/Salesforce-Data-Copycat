@@ -2,7 +2,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import express from 'express';
-import session from 'express-session';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -10,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 
 import config from './config.js';
+import { sessionMiddleware } from './session.js';
 import authRoutes from './routes/auth.js';
 import dataRoutes from './routes/data.js';
 
@@ -28,21 +28,8 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
-app.use(
-  session({
-    name: 'sfcopycat.sid',
-    secret: config.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    rolling: true,
-    cookie: {
-      httpOnly: true,
-      secure: config.cookieSecure,
-      sameSite: 'lax',
-      maxAge: config.sessionTtlMs,
-    },
-  })
-);
+// Stateless, encrypted cookie session (works on serverless).
+app.use(sessionMiddleware);
 
 // Basic rate limiting on the auth endpoints to slow credential guessing.
 const authLimiter = rateLimit({
@@ -77,8 +64,14 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || 'Internal server error.' });
 });
 
-app.listen(config.port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Salesforce Data Copycat API listening on http://localhost:${config.port}`);
-  if (config.oauthEnabled) console.log('OAuth2 login is enabled.');
-});
+// Only bind a port when running as a long-lived process (local dev / node
+// server). On serverless (Vercel) the app is imported and invoked per request.
+if (!config.isServerless) {
+  app.listen(config.port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Salesforce Data Copycat API listening on http://localhost:${config.port}`);
+    if (config.oauthEnabled) console.log('OAuth2 login is enabled.');
+  });
+}
+
+export default app;

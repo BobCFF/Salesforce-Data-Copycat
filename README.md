@@ -92,6 +92,29 @@ npm start          # server serves the API *and* the built client on :4000
 ```
 Set `COOKIE_SECURE=true` and a strong `SESSION_SECRET` when serving over HTTPS.
 
+### 5. Deploy to Vercel
+
+The app is Vercel-ready:
+
+- `api/index.mjs` exposes the Express app as a serverless function; `vercel.json`
+  rewrites `/api/*` to it and serves the built client (`client/dist`) from the CDN.
+- Sessions use **stateless encrypted cookies** ([iron-session](https://github.com/vvo/iron-session)),
+  so they survive across ephemeral/scaled serverless instances (an in-memory
+  store would not).
+
+Deploy by importing the GitHub repo into Vercel (build settings are picked up
+from `vercel.json`), then **set a `SESSION_SECRET` environment variable** in the
+Vercel project settings (Project → Settings → Environment Variables) and
+redeploy. Until you do, a baked fallback secret in `server/src/deploy-secret.js`
+is used so the deploy works out of the box — **rotate it** by setting the env var.
+
+> **Serverless caveat — large Bulk copies.** Serverless functions have a maximum
+> execution time (`maxDuration` is set to 60s in `vercel.json`; Vercel Hobby caps
+> at 60s, Pro allows longer). Interactive browsing, querying, and small/medium
+> copies work well, but a very large Bulk API load can exceed that limit and time
+> out. For big data volumes, run the app as a normal long-lived Node process
+> (`npm start`) or on a host without a hard request timeout.
+
 ---
 
 ## Connecting to an org
