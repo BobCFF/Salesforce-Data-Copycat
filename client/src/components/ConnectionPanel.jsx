@@ -66,14 +66,14 @@ export default function ConnectionPanel({ side, status, oauthEnabled, onChange }
 
       {connected ? (
         <div className="conn-info">
+          <button className="btn small disconnect-btn" onClick={disconnect} disabled={busy}>
+            Disconnect
+          </button>
           <div>
             <strong>{status.userInfo?.username || status.userInfo?.displayName || 'Connected'}</strong>
           </div>
           <div className="muted small">{status.instanceUrl}</div>
           <div className="muted small">Org: {status.userInfo?.organizationId}</div>
-          <button className="btn" onClick={disconnect} disabled={busy}>
-            Disconnect
-          </button>
         </div>
       ) : (
         <form className="conn-form" onSubmit={connect}>
