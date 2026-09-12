@@ -147,10 +147,18 @@ body {
 .explorer {
   flex: 1;
   display: grid;
-  grid-template-columns: 240px 300px 1fr 280px;
+  grid-template-columns: 240px 6px 300px 6px minmax(0, 1fr) 6px 280px;
   min-height: 0;
   border-top: 1px solid var(--border-light);
 }
+/* Draggable divider between Explorer panels. */
+.col-splitter {
+  cursor: col-resize;
+  background: var(--chrome-dark);
+  border-left: 1px solid var(--border-dark);
+  border-right: 1px solid var(--border-light);
+}
+.col-splitter:hover { background: var(--accent); }
 .col {
   display: flex;
   flex-direction: column;
@@ -250,8 +258,11 @@ body {
 .data-grid { border-collapse: collapse; width: 100%; font-size: 12px; }
 .data-grid th, .data-grid td {
   border: 1px solid #e2e2e2; padding: 3px 8px; text-align: left;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; text-overflow: ellipsis;
 }
+/* Body cells clip overflow; header cells must NOT (so the ⋯ menu can show). */
+.data-grid td { overflow: hidden; }
+.data-grid th { overflow: visible; }
 /* Header cells drop their padding (th-inner supplies it) and stay the
    containing block for the resizer/menu via their sticky positioning. */
 .data-grid.resizable thead th { padding: 0; }
@@ -335,13 +346,16 @@ body {
 .statusbar > span { border-right: 1px solid var(--border-dark); padding-right: 16px; }
 .statusbar > span:last-child, .statusbar > .spacer { border-right: none; }
 
-/* Responsive: stack columns on narrow screens. */
+/* Responsive: stack columns on narrow screens. The inline grid-template
+   (from the drag-resize state) is overridden with !important here, and the
+   drag splitters are hidden. */
 @media (max-width: 1100px) {
-  .explorer { grid-template-columns: 200px 1fr; grid-auto-rows: minmax(0, 1fr); }
+  .explorer { grid-template-columns: 200px 1fr !important; grid-auto-rows: minmax(0, 1fr); }
+  .col-splitter { display: none; }
   .copy-col { grid-column: 1 / -1; border-top: 1px solid var(--border-dark); max-height: 260px; }
 }
 @media (max-width: 700px) {
   .connbar { flex-direction: column; }
   .copy-arrow { transform: rotate(90deg); }
-  .explorer { grid-template-columns: 1fr; }
+  .explorer { grid-template-columns: 1fr !important; }
 }
