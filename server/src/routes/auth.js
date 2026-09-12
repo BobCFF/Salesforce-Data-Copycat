@@ -53,6 +53,7 @@ router.post('/connect/:side', async (req, res, next) => {
       creds = await loginWithPassword({ loginUrl, username, password, securityToken });
     }
     setCredentials(req, side, creds);
+    await req.session.save();
     res.json({ side, ...statusView(req, side) });
   } catch (err) {
     // Surface Salesforce login errors clearly without leaking secrets.
@@ -61,30 +62,31 @@ router.post('/connect/:side', async (req, res, next) => {
   }
 });
 
-router.post('/disconnect/:side', (req, res) => {
+router.post('/disconnect/:side', async (req, res) => {
   const { side } = req.params;
   if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
   clearCredentials(req, side);
+  await req.session.save();
   res.json({ side, connected: false });
 });
 
 router.post('/disconnect', (req, res) => {
   for (const side of SIDES) clearCredentials(req, side);
-  req.session.destroy(() => {
-    res.clearCookie('sfcopycat.sid');
-    res.json({ ok: true });
-  });
+  // iron-session: destroy() clears the data and sends an expired cookie.
+  req.session.destroy();
+  res.json({ ok: true });
 });
 
 // -------- OAuth2 web-server flow (optional) --------
 
 // Kick off OAuth for a side. Requires a Connected App to be configured.
-router.get('/oauth/login/:side', (req, res) => {
+router.get('/oauth/login/:side', async (req, res) => {
   if (!config.oauthEnabled) return res.status(400).json({ error: 'OAuth is not configured on the server.' });
   const { side } = req.params;
   if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
   const loginUrl = req.query.loginUrl || 'https://login.salesforce.com';
   req.session.oauthPending = { side, loginUrl };
+  await req.session.save();
   const auth = oauth2(loginUrl);
   const url = auth.getAuthorizationUrl({ scope: 'api refresh_token', prompt: 'login' });
   res.redirect(url);
@@ -116,8 +118,10 @@ router.get('/oauth/callback', async (req, res, next) => {
       },
     });
     delete req.session.oauthPending;
-    // Redirect back to the SPA.
-    const target = config.clientOrigins[0] || '/';
+    await req.session.save();
+    // Redirect back to the SPA. On a single-origin (serverless) deploy this is
+    // the site root; in split dev it is the configured client origin.
+    const target = config.isServerless ? '' : config.clientOrigins[0] || '';
     res.redirect(`${target}/?connected=${side}`);
   } catch (err) {
     next(err);
