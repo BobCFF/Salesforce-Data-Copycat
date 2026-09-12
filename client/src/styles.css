@@ -166,10 +166,19 @@ body {
 .explorer.dock-bottom > .qb-col { grid-row: 1; grid-column: 3; }
 .explorer.dock-bottom > .split-qb { grid-row: 1; grid-column: 4; }
 .explorer.dock-bottom > .copy-col { grid-row: 1; grid-column: 5; border-right: none; }
+.explorer.dock-bottom > .row-splitter { grid-row: 2; grid-column: 1 / -1; }
 .explorer.dock-bottom > .grid-col {
-  grid-row: 2; grid-column: 1 / -1; border-top: 1px solid var(--border-dark);
+  grid-row: 3; grid-column: 1 / -1; border-top: 1px solid var(--border-dark);
 }
 .explorer.dock-bottom > .split-copy { display: none; }
+/* Horizontal divider for the docked results row. */
+.row-splitter {
+  cursor: row-resize;
+  background: var(--chrome-dark);
+  border-top: 1px solid var(--border-dark);
+  border-bottom: 1px solid var(--border-light);
+}
+.row-splitter:hover { background: var(--accent); }
 .col {
   display: flex;
   flex-direction: column;
@@ -362,7 +371,7 @@ body {
    drag splitters are hidden. */
 @media (max-width: 1100px) {
   .explorer { grid-template-columns: 200px 1fr !important; grid-template-rows: none !important; grid-auto-rows: minmax(0, 1fr); }
-  .col-splitter { display: none; }
+  .col-splitter, .row-splitter { display: none; }
   .copy-col { grid-column: 1 / -1; border-top: 1px solid var(--border-dark); max-height: 260px; }
   /* Neutralize docked-bottom placement so narrow screens stack normally. */
   .explorer.dock-bottom > * { grid-row: auto; grid-column: auto; }
