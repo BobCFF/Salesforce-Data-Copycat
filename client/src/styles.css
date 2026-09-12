@@ -334,6 +334,46 @@ body {
 .data-grid tbody tr:hover { background: var(--accent-soft); }
 .sort-caret { color: var(--accent); font-size: 10px; }
 
+/* ---------- Export modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal {
+  background: var(--pane); border: 1px solid var(--border-dark); border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  width: 460px; max-width: 100%; max-height: 90vh; display: flex; flex-direction: column;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600;
+  background: linear-gradient(to bottom, var(--title-to), var(--title-from)); color: #fff;
+  border-radius: 4px 4px 0 0;
+}
+.modal-x { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+.modal-body { padding: 12px; overflow: auto; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 8px 12px; border-top: 1px solid var(--chrome-dark);
+}
+.export-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.export-section { margin-bottom: 12px; }
+.export-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; font-size: 12px; margin-bottom: 6px;
+}
+.export-actions { display: flex; gap: 4px; font-weight: normal; }
+.export-section label.inline { display: inline-flex; align-items: center; gap: 4px; margin-right: 14px; }
+.export-cols {
+  max-height: 240px; overflow: auto; border: 1px solid var(--chrome-dark);
+  border-radius: 2px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;
+}
+.export-col { display: flex; align-items: center; gap: 6px; font-size: 12px; overflow: hidden; }
+.export-col span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .export-cols { grid-template-columns: 1fr; } }
+
 /* ---------- Copy panel ---------- */
 .copy-panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .copy-note, .copy-form { padding: 8px; }
