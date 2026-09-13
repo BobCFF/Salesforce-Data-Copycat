@@ -8,6 +8,7 @@ import DataGrid from './components/DataGrid.jsx';
 import CopyPanel from './components/CopyPanel.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import OAuthSettings from './components/OAuthSettings.jsx';
+import SettingsDrawer from './components/SettingsDrawer.jsx';
 
 const DEFAULT_SELECTION = {
   sobject: '',
@@ -50,6 +51,18 @@ export default function App() {
   const [bottomH, setBottomH] = usePersistedState('sfcopycat.bottomH', 300);
   const [showExport, setShowExport] = useState(false);
   const [showOAuth, setShowOAuth] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Source Objects as a full-height side pane (vs. inside the Explorer grid).
+  const [treeSidebar, setTreeSidebar] = usePersistedState('sfcopycat.treeSidebar', false);
+  // Color theme: 'system' | 'light' | 'dark'.
+  const [theme, setTheme] = usePersistedState('sfcopycat.theme', 'system');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
+    else root.removeAttribute('data-theme');
+  }, [theme]);
 
   function startBottomResize(e) {
     e.preventDefault();
@@ -244,82 +257,102 @@ export default function App() {
   const soqlPreview = useMemo(() => buildPreview(selection), [selection]);
   const columns = queryResult?.records?.length ? deriveColumns(queryResult.records, selection.fields) : selection.fields;
 
+  const objectTreeEl = (
+    <ObjectTree
+      title="Source Objects"
+      objects={sourceObjects}
+      loading={loadingObjects && !sourceObjects.length}
+      selected={selectedObject}
+      onSelect={selectObject}
+    />
+  );
+
+  const treeCols = treeSidebar ? '' : `${panelW.tree}px 6px `;
+  const explorerStyle = dockBottom
+    ? {
+        gridTemplateColumns: `${treeCols}${panelW.qb}px 6px minmax(0, 1fr)`,
+        gridTemplateRows: `minmax(0, 1fr) 6px ${bottomH}px`,
+      }
+    : {
+        gridTemplateColumns: `${treeCols}${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
+      };
+
   return (
     <div className="app">
       <header className="titlebar">
         <div className="title">
+          <button className="menu-btn" onClick={() => setShowMenu(true)} title="Menu — connections, preferences, theme">☰</button>
           <span className="app-icon">🗂️</span> Salesforce Data Copycat
         </div>
         <div className="titlebar-actions">
-          <button className="btn small" onClick={() => setShowOAuth(true)} title="Configure Salesforce OAuth (Connected App)">
-            ⚙ OAuth
-          </button>
           {(sourceConnected || targetConnected) && (
             <button className="btn small" onClick={logout}>Log out all</button>
           )}
         </div>
       </header>
 
-      <div className="connbar">
-        <ConnectionPanel
-          side="source"
-          status={status?.source}
-          oauthEnabled={status?.oauthEnabled}
-          onChange={refreshStatus}
-        />
-        <div className="copy-arrow">
-          ➜
-          {(sourceConnected || targetConnected) && (
-            <button className="btn small swap-btn" onClick={swapConnections} title="Swap source and target">
-              ⇄ Swap
-            </button>
+      <div className="app-body">
+        {treeSidebar && (
+          <>
+            <aside className="side-tree" style={{ width: panelW.tree }}>{objectTreeEl}</aside>
+            <div className="side-splitter" title="Drag to resize" onMouseDown={(e) => startPanelResize(e, 'tree', 1)} />
+          </>
+        )}
+
+        <div className="app-main">
+          <section className="connections">
+            <div className="section-title">
+              Connections
+              <span className="muted small">— connect two orgs, then pick source and target</span>
+              <button className="link" onClick={() => setShowMenu(true)}>Setup help</button>
+            </div>
+            <div className="connbar">
+              <ConnectionPanel
+                side="source"
+                status={status?.source}
+                oauthEnabled={status?.oauthEnabled}
+                onChange={refreshStatus}
+              />
+              <div className="copy-arrow">
+                ➜
+                {(sourceConnected || targetConnected) && (
+                  <button className="btn small swap-btn" onClick={swapConnections} title="Swap source and target">
+                    ⇄ Swap
+                  </button>
+                )}
+              </div>
+              <ConnectionPanel
+                side="target"
+                status={status?.target}
+                oauthEnabled={status?.oauthEnabled}
+                onChange={refreshStatus}
+              />
+            </div>
+          </section>
+
+          {error && (
+            <div className="error-bar">
+              {error}
+              <button className="link" onClick={() => setError('')}>dismiss</button>
+            </div>
           )}
-        </div>
-        <ConnectionPanel
-          side="target"
-          status={status?.target}
-          oauthEnabled={status?.oauthEnabled}
-          onChange={refreshStatus}
-        />
-      </div>
 
-      {error && (
-        <div className="error-bar">
-          {error}
-          <button className="link" onClick={() => setError('')}>dismiss</button>
-        </div>
-      )}
+          <div
+            className={`explorer${dockBottom ? ' dock-bottom' : ''}${treeSidebar ? ' no-tree' : ''}`}
+            style={explorerStyle}
+          >
+            {!treeSidebar && (
+              <>
+                <aside className="col tree-col">{objectTreeEl}</aside>
+                <div
+                  className="col-splitter split-tree"
+                  title="Drag to resize"
+                  onMouseDown={(e) => startPanelResize(e, 'tree', 1)}
+                />
+              </>
+            )}
 
-      <div
-        className={`explorer${dockBottom ? ' dock-bottom' : ''}`}
-        style={
-          dockBottom
-            ? {
-                gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr)`,
-                gridTemplateRows: `minmax(0, 1fr) 6px ${bottomH}px`,
-              }
-            : {
-                gridTemplateColumns: `${panelW.tree}px 6px ${panelW.qb}px 6px minmax(0, 1fr) 6px ${panelW.copy}px`,
-              }
-        }
-      >
-        <aside className="col tree-col">
-          <ObjectTree
-            title="Source Objects"
-            objects={sourceObjects}
-            loading={loadingObjects && !sourceObjects.length}
-            selected={selectedObject}
-            onSelect={selectObject}
-          />
-        </aside>
-
-        <div
-          className="col-splitter split-tree"
-          title="Drag to resize"
-          onMouseDown={(e) => startPanelResize(e, 'tree', 1)}
-        />
-
-        <section className="col qb-col">
+            <section className="col qb-col">
           <div className="pane-header">
             Query: {selectedObject || '—'}
           </div>
@@ -389,21 +422,23 @@ export default function App() {
           />
         </aside>
 
-        {dockBottom && (
-          <div
-            className="row-splitter"
-            title="Drag to resize the results height"
-            onMouseDown={startBottomResize}
-          />
-        )}
-      </div>
+            {dockBottom && (
+              <div
+                className="row-splitter"
+                title="Drag to resize the results height"
+                onMouseDown={startBottomResize}
+              />
+            )}
+          </div>
 
-      <footer className="statusbar">
-        <span>{sourceConnected ? `Source: ${status.source.userInfo?.username || status.source.instanceUrl}` : 'Source: not connected'}</span>
-        <span>{targetConnected ? `Target: ${status.target.userInfo?.username || status.target.instanceUrl}` : 'Target: not connected'}</span>
-        <span className="spacer" />
-        <span>{selectedObject ? `${selection.fields.length} fields selected` : 'No object selected'}</span>
-      </footer>
+          <footer className="statusbar">
+            <span>{sourceConnected ? `Source: ${status.source.userInfo?.username || status.source.instanceUrl}` : 'Source: not connected'}</span>
+            <span>{targetConnected ? `Target: ${status.target.userInfo?.username || status.target.instanceUrl}` : 'Target: not connected'}</span>
+            <span className="spacer" />
+            <span>{selectedObject ? `${selection.fields.length} fields selected` : 'No object selected'}</span>
+          </footer>
+        </div>
+      </div>
 
       {showExport && (
         <ExportDialog
@@ -416,6 +451,21 @@ export default function App() {
 
       {showOAuth && (
         <OAuthSettings onClose={() => setShowOAuth(false)} onChange={refreshStatus} />
+      )}
+
+      {showMenu && (
+        <SettingsDrawer
+          onClose={() => setShowMenu(false)}
+          theme={theme}
+          setTheme={setTheme}
+          dockBottom={dockBottom}
+          setDockBottom={setDockBottom}
+          treeSidebar={treeSidebar}
+          setTreeSidebar={setTreeSidebar}
+          onOpenOAuth={() => { setShowMenu(false); setShowOAuth(true); }}
+          onLogout={logout}
+          connected={sourceConnected || targetConnected}
+        />
       )}
     </div>
   );
