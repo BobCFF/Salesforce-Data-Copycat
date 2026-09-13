@@ -29,13 +29,14 @@ export default function CopyPanel({
     if (name) onLoadTargetMeta(name);
   }
 
-  function run() {
+  function run(dryRun = false) {
     onCopy({
       sourceObject,
       targetObject: effectiveTarget,
       operation,
       externalIdField: operation === 'upsert' ? externalIdField : undefined,
       useBulk,
+      dryRun,
     });
   }
 
@@ -92,32 +93,60 @@ export default function CopyPanel({
           Use Bulk API to load
         </label>
 
-        <button className="btn primary block" onClick={run} disabled={!canRun}>
+        <button className="btn block" onClick={() => run(true)} disabled={!canRun} title="Read from source and validate against the target WITHOUT writing anything">
+          {copying ? '⧗ Working…' : '🧪 Test run (no writes)'}
+        </button>
+        <button className="btn primary block" onClick={() => run(false)} disabled={!canRun}>
           {copying ? '⧗ Copying…' : `⧉ Copy ${sourceObject || ''} → ${effectiveTarget || 'target'}`}
         </button>
       </div>
 
       {result && (
         <div className="copy-result">
-          <div className="result-summary">
-            <span className="ok">✔ {result.successCount} succeeded</span>
-            <span className={result.failureCount ? 'fail' : 'muted'}>
-              ✖ {result.failureCount} failed
-            </span>
-            <span className="muted">of {result.total}</span>
-          </div>
-          {result.failureCount > 0 && (
-            <details className="result-errors" open>
-              <summary>Errors ({result.failureCount})</summary>
-              <ul>
-                {result.results
-                  .filter((r) => !r.success)
-                  .slice(0, 100)
-                  .map((r, i) => (
-                    <li key={i}>{(r.errors || []).join('; ') || 'Unknown error'}</li>
-                  ))}
-              </ul>
-            </details>
+          {result.dryRun ? (
+            <>
+              <div className="result-summary">
+                <span className="badge-dryrun">🧪 Test run — nothing was written</span>
+              </div>
+              <div className="dryrun-detail">
+                <div><strong>{result.total}</strong> record{result.total === 1 ? '' : 's'} would be {result.preview?.operation || 'loaded'}ed into <strong>{result.targetObject}</strong>.</div>
+                <div className="muted small">Fields written: {(result.preview?.fieldsToWrite || []).join(', ') || '—'}</div>
+                {result.preview?.droppedFields?.length > 0 && (
+                  <div className="warn small">
+                    Dropped (not writable on target): {result.preview.droppedFields.join(', ')}
+                  </div>
+                )}
+                {result.preview?.sample?.length > 0 && (
+                  <details className="result-errors">
+                    <summary>Sample of prepared records ({result.preview.sample.length})</summary>
+                    <pre className="soql-preview">{JSON.stringify(result.preview.sample, null, 2)}</pre>
+                  </details>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="result-summary">
+                <span className="ok">✔ {result.successCount} succeeded</span>
+                <span className={result.failureCount ? 'fail' : 'muted'}>
+                  ✖ {result.failureCount} failed
+                </span>
+                <span className="muted">of {result.total}</span>
+              </div>
+              {result.failureCount > 0 && (
+                <details className="result-errors" open>
+                  <summary>Errors ({result.failureCount})</summary>
+                  <ul>
+                    {result.results
+                      .filter((r) => !r.success)
+                      .slice(0, 100)
+                      .map((r, i) => (
+                        <li key={i}>{(r.errors || []).join('; ') || 'Unknown error'}</li>
+                      ))}
+                  </ul>
+                </details>
+              )}
+            </>
           )}
         </div>
       )}
