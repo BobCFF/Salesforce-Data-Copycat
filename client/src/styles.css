@@ -394,6 +394,15 @@ body {
 .copy-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 600; }
 .copy-form label.checkbox { flex-direction: row; align-items: center; font-weight: normal; }
 .copy-form select { padding: 4px 6px; }
+.copy-arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.swap-btn { white-space: nowrap; }
+.copy-form .btn.block + .btn.block { margin-top: 6px; }
+.badge-dryrun {
+  background: #fff4d6; color: #7a5a00; border: 1px solid #e6c766;
+  padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600;
+}
+.dryrun-detail { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.dryrun-detail .warn { color: #a6690a; }
 .copy-result { padding: 8px; border-top: 1px solid var(--chrome-dark); }
 .result-summary { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; }
 .result-summary .ok { color: var(--ok); font-weight: 600; }

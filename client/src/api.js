@@ -26,6 +26,7 @@ export const api = {
   connect: (side, payload) => request('POST', `/api/connect/${side}`, payload),
   disconnect: (side) => request('POST', `/api/disconnect/${side}`),
   logout: () => request('POST', '/api/disconnect'),
+  swapConnections: () => request('POST', '/api/connections/swap'),
 
   getOAuthConfig: () => request('GET', '/api/oauth/config'),
   setOAuthConfig: (payload) => request('POST', '/api/oauth/config', payload),

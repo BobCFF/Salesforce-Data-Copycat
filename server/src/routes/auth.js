@@ -126,6 +126,20 @@ router.post('/disconnect', (req, res) => {
   res.json({ ok: true });
 });
 
+// Swap which connected org is the source and which is the target.
+router.post('/connections/swap', async (req, res) => {
+  const orgs = req.session.orgs || {};
+  const source = orgs.source;
+  const target = orgs.target;
+  req.session.orgs = { ...orgs };
+  if (target) req.session.orgs.source = target;
+  else delete req.session.orgs.source;
+  if (source) req.session.orgs.target = source;
+  else delete req.session.orgs.target;
+  await req.session.save();
+  res.json({ source: statusView(req, 'source'), target: statusView(req, 'target') });
+});
+
 // -------- OAuth2 web-server flow (optional) --------
 
 // Kick off OAuth for a side. Requires a Connected App to be configured.

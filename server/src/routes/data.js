@@ -92,6 +92,7 @@ router.post(
       externalIdField,
       fieldMapping = {},
       useBulk = true,
+      dryRun = false,
       soql: rawSoql,
     } = req.body || {};
 
@@ -105,7 +106,7 @@ router.post(
     const { records } = await runQuery(source, soql, { useBulk, maxRecords: 100000 });
 
     if (!records.length) {
-      return { soql, total: 0, successCount: 0, failureCount: 0, results: [], targetObject };
+      return { soql, total: 0, successCount: 0, failureCount: 0, results: [], targetObject, dryRun };
     }
 
     // 2. Figure out which fields the target will accept for this operation.
@@ -121,6 +122,31 @@ router.post(
     // 3. Prepare records (strip system fields, apply mapping, keep writable only).
     const prepared = prepareRecords(records, writable, fieldMapping);
 
+    // Dry run / mock copy: validate and preview WITHOUT writing to the target.
+    if (dryRun) {
+      const preparedFields = [...new Set(prepared.flatMap((r) => Object.keys(r)))];
+      const requested = new Set((fields.length ? fields : Object.keys(records[0] || {})).filter((f) => f !== 'attributes'));
+      const droppedFields = [...requested].filter(
+        (f) => !writable.has(fieldMapping[f] || f) && f !== 'attributes'
+      );
+      return {
+        soql,
+        targetObject,
+        dryRun: true,
+        total: prepared.length,
+        successCount: 0,
+        failureCount: 0,
+        results: [],
+        preview: {
+          operation,
+          externalIdField: operation === 'upsert' ? externalIdField : undefined,
+          fieldsToWrite: preparedFields,
+          droppedFields,
+          sample: prepared.slice(0, 20),
+        },
+      };
+    }
+
     // 4. Load into target.
     const loadResult = await loadRecords(target, targetObject, prepared, {
       operation,
@@ -128,7 +154,7 @@ router.post(
       useBulk,
     });
 
-    return { soql, targetObject, ...loadResult };
+    return { soql, targetObject, dryRun: false, ...loadResult };
   })
 );
 

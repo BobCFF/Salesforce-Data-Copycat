@@ -191,7 +191,7 @@ export default function App() {
     }
   }
 
-  async function doCopy({ sourceObject, targetObject, operation, externalIdField, useBulk }) {
+  async function doCopy({ sourceObject, targetObject, operation, externalIdField, useBulk, dryRun = false }) {
     setCopying(true);
     setCopyResult(null);
     setError('');
@@ -208,12 +208,25 @@ export default function App() {
         operation,
         externalIdField,
         useBulk,
+        dryRun,
       });
       setCopyResult(res);
     } catch (err) {
       setError(err.message);
     } finally {
       setCopying(false);
+    }
+  }
+
+  async function swapConnections() {
+    try {
+      await api.swapConnections();
+      setSelectedObject('');
+      setMeta(null);
+      setQueryResult(null);
+      await refreshStatus();
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -254,7 +267,14 @@ export default function App() {
           oauthEnabled={status?.oauthEnabled}
           onChange={refreshStatus}
         />
-        <div className="copy-arrow">➜</div>
+        <div className="copy-arrow">
+          ➜
+          {(sourceConnected || targetConnected) && (
+            <button className="btn small swap-btn" onClick={swapConnections} title="Swap source and target">
+              ⇄ Swap
+            </button>
+          )}
+        </div>
         <ConnectionPanel
           side="target"
           status={status?.target}
