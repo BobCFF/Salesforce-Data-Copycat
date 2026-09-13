@@ -4,6 +4,7 @@ import { usePersistedState } from './usePersistedState.js';
 import ConnectionsDialog from './components/ConnectionsDialog.jsx';
 import ObjectTree from './components/ObjectTree.jsx';
 import QueryBuilder from './components/QueryBuilder.jsx';
+import SoqlEditor from './components/SoqlEditor.jsx';
 import DataGrid from './components/DataGrid.jsx';
 import CopyPanel from './components/CopyPanel.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
@@ -33,6 +34,11 @@ export default function App() {
 
   const [queryResult, setQueryResult] = useState(null);
   const [querying, setQuerying] = useState(false);
+
+  // Query authoring mode: the structured builder, or a raw SOQL editor with
+  // autocomplete. Persisted; `soqlText` holds the editor contents.
+  const [queryMode, setQueryMode] = usePersistedState('sfcopycat.queryMode', 'builder');
+  const [soqlText, setSoqlText] = useState('');
 
   const [targetMeta, setTargetMeta] = useState(null);
   const [copyResult, setCopyResult] = useState(null);
@@ -165,6 +171,8 @@ export default function App() {
         sobject: name,
         fields: defaults.length ? defaults : ['Id'],
       });
+      // Seed the raw SOQL editor with a sensible starting query for this object.
+      setSoqlText(`SELECT ${(defaults.length ? defaults : ['Id']).join(', ')}\nFROM ${name}\nLIMIT 200`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -173,20 +181,24 @@ export default function App() {
   }
 
   async function runQuery() {
-    if (!selectedObject) return;
+    const isSoql = queryMode === 'soql';
+    if (isSoql ? !soqlText.trim() : !selectedObject) return;
     setQuerying(true);
     setError('');
     try {
-      const res = await api.query('source', {
-        sobject: selectedObject,
-        fields: selection.fields,
-        filters: selection.filters,
-        filterLogic: selection.filterLogic,
-        orderBy: selection.orderBy,
-        limit: selection.limit,
-        useBulk: selection.useBulk,
-        maxRecords: Number(selection.limit) || 2000,
-      });
+      const payload = isSoql
+        ? { soql: soqlText.trim(), useBulk: selection.useBulk, maxRecords: 50000 }
+        : {
+            sobject: selectedObject,
+            fields: selection.fields,
+            filters: selection.filters,
+            filterLogic: selection.filterLogic,
+            orderBy: selection.orderBy,
+            limit: selection.limit,
+            useBulk: selection.useBulk,
+            maxRecords: Number(selection.limit) || 2000,
+          };
+      const res = await api.query('source', payload);
       setQueryResult(res);
     } catch (err) {
       setError(err.message);
@@ -387,15 +399,43 @@ export default function App() {
 
             <section className="col qb-col">
           <div className="pane-header">
-            Query: {selectedObject || '—'}
+            <span>Query: {selectedObject || '—'}</span>
+            <span className="seg pane-mode">
+              <button
+                className={`seg-btn${queryMode === 'builder' ? ' active' : ''}`}
+                onClick={() => setQueryMode('builder')}
+                title="Point-and-click query builder"
+              >
+                Builder
+              </button>
+              <button
+                className={`seg-btn${queryMode === 'soql' ? ' active' : ''}`}
+                onClick={() => setQueryMode('soql')}
+                title="Write raw SOQL with autocomplete"
+              >
+                SOQL
+              </button>
+            </span>
           </div>
-          <QueryBuilder
-            meta={meta}
-            loading={loadingMeta}
-            value={selection}
-            onChange={setSelection}
-            soqlPreview={soqlPreview}
-          />
+          {queryMode === 'soql' ? (
+            <SoqlEditor
+              value={soqlText}
+              onChange={setSoqlText}
+              meta={meta}
+              objects={sourceObjects}
+              onRun={runQuery}
+              running={querying}
+              canRun={Boolean(soqlText.trim()) && sourceConnected}
+            />
+          ) : (
+            <QueryBuilder
+              meta={meta}
+              loading={loadingMeta}
+              value={selection}
+              onChange={setSelection}
+              soqlPreview={soqlPreview}
+            />
+          )}
         </section>
 
         <div
@@ -406,7 +446,11 @@ export default function App() {
 
         <main className="col grid-col">
           <div className="toolbar">
-            <button className="btn primary" onClick={runQuery} disabled={!selectedObject || querying}>
+            <button
+              className="btn primary"
+              onClick={runQuery}
+              disabled={querying || (queryMode === 'soql' ? !soqlText.trim() : !selectedObject)}
+            >
               {querying ? 'Running…' : '▶ Run Query'}
             </button>
             {queryResult && (

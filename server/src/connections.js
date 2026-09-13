@@ -54,6 +54,12 @@ export function swapRoles(req) {
   [r.source, r.target] = [r.target, r.source];
 }
 
+// A connection with no access/refresh token cannot be used until re-authed —
+// e.g. a profile-only import that carried no credentials.
+export function needsAuth(creds) {
+  return !creds.accessToken && !creds.refreshToken;
+}
+
 export function connectionSummary(id, creds) {
   return {
     id,
@@ -63,6 +69,27 @@ export function connectionSummary(id, creds) {
     organizationId: creds.userInfo?.organizationId,
     loginUrl: creds.loginUrl,
     method: creds.method,
+    profile: Boolean(creds.profile),
+    needsAuth: needsAuth(creds),
+  };
+}
+
+// A credentials view with all secrets removed — for profile-only export.
+export function toProfile(creds) {
+  return {
+    profile: true,
+    label: creds.label,
+    method: creds.method,
+    instanceUrl: creds.instanceUrl,
+    loginUrl: creds.loginUrl,
+    oauth: creds.oauth ? { clientId: creds.oauth.clientId, redirectUri: creds.oauth.redirectUri } : undefined,
+    userInfo: creds.userInfo
+      ? {
+          username: creds.userInfo.username,
+          organizationId: creds.userInfo.organizationId,
+          displayName: creds.userInfo.displayName,
+        }
+      : undefined,
   };
 }
 

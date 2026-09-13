@@ -16,6 +16,7 @@ import {
   statusView,
   rawConnections,
   findDuplicate,
+  toProfile,
 } from '../connections.js';
 import { encryptExport, decryptExport } from '../portable.js';
 
@@ -158,18 +159,18 @@ router.delete('/connections/:id', async (req, res) => {
 // Export connections as a passphrase-encrypted envelope. Optionally limit to
 // specific ids; defaults to all saved connections.
 router.post('/connections/export', (req, res) => {
-  const { passphrase, ids } = req.body || {};
+  const { passphrase, ids, includeCredentials = true } = req.body || {};
   const all = rawConnections(req);
   const wanted = Array.isArray(ids) && ids.length ? ids : Object.keys(all);
   const payload = wanted
     .filter((id) => all[id])
-    .map((id) => all[id]);
+    .map((id) => (includeCredentials ? all[id] : toProfile(all[id])));
   if (!payload.length) {
     return res.status(400).json({ error: 'There are no connections to export.' });
   }
   try {
     const envelope = encryptExport(payload, passphrase);
-    res.json(envelope);
+    res.json({ ...envelope, includesCredentials: Boolean(includeCredentials) });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
