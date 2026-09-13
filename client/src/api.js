@@ -23,8 +23,12 @@ async function request(method, url, body) {
 
 export const api = {
   status: () => request('GET', '/api/status'),
-  connect: (side, payload) => request('POST', `/api/connect/${side}`, payload),
-  disconnect: (side) => request('POST', `/api/disconnect/${side}`),
+
+  // Named connection registry.
+  connections: () => request('GET', '/api/connections'),
+  createConnection: (payload) => request('POST', '/api/connect', payload),
+  setRoles: ({ source, target }) => request('POST', '/api/connections/roles', { source, target }),
+  removeConnection: (id) => request('DELETE', `/api/connections/${id}`),
   logout: () => request('POST', '/api/disconnect'),
   swapConnections: () => request('POST', '/api/connections/swap'),
 
