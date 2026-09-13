@@ -5,16 +5,18 @@ const KNOWN_HOSTS = ['https://login.salesforce.com', 'https://test.salesforce.co
 const cleanUrl = (u) => (u || '').trim().replace(/\/+$/, '');
 
 // A single, role-agnostic form for adding a new named connection. On success
-// it calls onConnected() so the parent can refresh the connection list.
-export default function ConnectForm({ oauthEnabled, onConnected }) {
-  const [method, setMethod] = useState('password');
+// it calls onConnected() so the parent can refresh the connection list. An
+// `initial` prop pre-fills the form (used when re-authing an imported profile);
+// remount the component (via key) to adopt new initial values.
+export default function ConnectForm({ oauthEnabled, onConnected, initial }) {
+  const [method, setMethod] = useState(initial?.method === 'token' ? 'token' : 'password');
   const [form, setForm] = useState({
-    label: '',
-    loginUrl: 'https://login.salesforce.com',
-    username: '',
+    label: initial?.label || '',
+    loginUrl: initial?.loginUrl || 'https://login.salesforce.com',
+    username: initial?.username || '',
     password: '',
     securityToken: '',
-    instanceUrl: '',
+    instanceUrl: initial?.instanceUrl || '',
     accessToken: '',
   });
   const [busy, setBusy] = useState(false);

@@ -293,7 +293,62 @@ input, select, textarea {
   background: linear-gradient(to bottom, var(--header-a), var(--header-b));
   border-bottom: 1px solid var(--border-dark);
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
+.pane-mode .seg-btn { padding: 1px 8px; font-size: 11px; }
+
+/* ---------- SOQL editor ---------- */
+.soql-editor { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.soql-editor-hint { padding: 6px 8px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--cell-border); }
+.soql-editor-hint kbd {
+  background: var(--chrome-dark); border: 1px solid var(--border); border-radius: 3px;
+  padding: 0 4px; font-size: 10px; font-family: inherit;
+}
+.soql-wrap { position: relative; flex: 1; min-height: 120px; display: flex; }
+.soql-textarea {
+  flex: 1; width: 100%; resize: none; border: none; outline: none;
+  padding: 8px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px; line-height: 1.5; background: var(--pane); color: var(--text);
+  white-space: pre-wrap; word-wrap: break-word;
+}
+.soql-mirror {
+  position: absolute; visibility: hidden; top: 0; left: 0; padding: 8px;
+  font-size: 12px; line-height: 1.5; pointer-events: none;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+.soql-suggest {
+  position: absolute; z-index: 20; margin: 0; padding: 2px; list-style: none;
+  min-width: 200px; max-width: 320px; max-height: 220px; overflow: auto;
+  background: var(--menu-bg); border: 1px solid var(--border-dark); border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28); font-size: 12px;
+}
+.soql-suggest li {
+  display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 3px; cursor: pointer;
+}
+.soql-suggest li.active { background: var(--accent); color: #fff; }
+.soql-suggest li.active .sg-detail { color: #e7eefc; }
+.sg-kind {
+  font-size: 9px; text-transform: uppercase; padding: 0 4px; border-radius: 6px;
+  background: var(--chrome-dark); color: var(--muted); flex: none;
+}
+.sg-fn { background: #6f42c1; color: #fff; }
+.sg-field { background: #1f6feb; color: #fff; }
+.sg-object { background: #1a7f37; color: #fff; }
+.sg-date { background: #9a6700; color: #fff; }
+.sg-label { flex: 1; font-family: "SFMono-Regular", Consolas, monospace; }
+.sg-detail { color: var(--muted); font-size: 11px; }
+.soql-fnbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  padding: 6px 8px; border-top: 1px solid var(--cell-border); background: var(--chrome);
+}
+.chip {
+  font: inherit; font-size: 11px; padding: 1px 8px; border-radius: 10px; cursor: pointer;
+  background: var(--btn-a); border: 1px solid var(--border); color: var(--text);
+}
+.chip:hover { background: var(--accent-soft); border-color: var(--accent); }
 
 /* ---------- Tree ---------- */
 .tree-pane { display: flex; flex-direction: column; min-height: 0; height: 100%; }
@@ -467,6 +522,13 @@ input, select, textarea {
 .conn-table th { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .conn-table td.center, .conn-table th:nth-child(2), .conn-table th:nth-child(3) { text-align: center; }
 .conn-name { font-weight: 600; }
+.row-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+.badge {
+  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px;
+  font-size: 10px; font-weight: 600; vertical-align: middle;
+}
+.badge.warn { background: #7a5c00; color: #fff; }
+:root:not([data-theme="dark"]) .badge.warn { background: #f0c000; color: #3a2d00; }
 .role-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .add-conn { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
 .add-conn h4 { margin: 0 0 8px; }
