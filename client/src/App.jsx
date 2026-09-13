@@ -45,7 +45,7 @@ export default function App() {
 
   // When true, the results section is docked as a full-width bottom row that
   // spans beneath the other three sections instead of being the center column.
-  const [dockBottom, setDockBottom] = usePersistedState('sfcopycat.dockBottom', false);
+  const [dockBottom, setDockBottom] = usePersistedState('sfcopycat.dockBottom', true);
   // Height (px) of the docked results row; drag-adjustable.
   const [bottomH, setBottomH] = usePersistedState('sfcopycat.bottomH', 300);
   const [showExport, setShowExport] = useState(false);
