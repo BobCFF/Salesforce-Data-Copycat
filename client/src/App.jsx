@@ -39,6 +39,14 @@ export default function App() {
   // autocomplete. Persisted; `soqlText` holds the editor contents.
   const [queryMode, setQueryMode] = usePersistedState('sfcopycat.queryMode', 'builder');
   const [soqlText, setSoqlText] = useState('');
+  // Recently-run raw SOQL queries (most recent first), persisted across refreshes.
+  const [soqlHistory, setSoqlHistory] = usePersistedState('sfcopycat.soqlHistory', []);
+
+  function recordSoqlHistory(q) {
+    const query = q.trim();
+    if (!query) return;
+    setSoqlHistory((prev) => [query, ...prev.filter((x) => x !== query)].slice(0, 25));
+  }
 
   const [targetMeta, setTargetMeta] = useState(null);
   const [copyResult, setCopyResult] = useState(null);
@@ -200,6 +208,7 @@ export default function App() {
           };
       const res = await api.query('source', payload);
       setQueryResult(res);
+      if (isSoql) recordSoqlHistory(soqlText);
     } catch (err) {
       setError(err.message);
       setQueryResult(null);
@@ -427,6 +436,9 @@ export default function App() {
               onCheck={(soql) => api.validateSoql('source', soql)}
               running={querying}
               canRun={Boolean(soqlText.trim()) && sourceConnected}
+              history={soqlHistory}
+              onPickHistory={(q) => setSoqlText(q)}
+              onClearHistory={() => setSoqlHistory([])}
             />
           ) : (
             <QueryBuilder
