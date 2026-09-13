@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
 
+const KNOWN_HOSTS = ['https://login.salesforce.com', 'https://test.salesforce.com'];
+const cleanUrl = (u) => (u || '').trim().replace(/\/+$/, '');
+
 // Login / status card for one org (source or target).
 export default function ConnectionPanel({ side, status, oauthEnabled, onChange }) {
   const [method, setMethod] = useState('password');
@@ -31,7 +34,7 @@ export default function ConnectionPanel({ side, status, oauthEnabled, onChange }
           ? { method: 'token', instanceUrl: form.instanceUrl, accessToken: form.accessToken }
           : {
               method: 'password',
-              loginUrl: form.loginUrl,
+              loginUrl: cleanUrl(form.loginUrl),
               username: form.username,
               password: form.password,
               securityToken: form.securityToken,
@@ -100,10 +103,23 @@ export default function ConnectionPanel({ side, status, oauthEnabled, onChange }
 
           {method === 'password' ? (
             <>
-              <select value={form.loginUrl} onChange={(e) => update('loginUrl', e.target.value)}>
+              <select
+                value={KNOWN_HOSTS.includes(form.loginUrl) ? form.loginUrl : '__custom__'}
+                onChange={(e) => update('loginUrl', e.target.value === '__custom__' ? '' : e.target.value)}
+              >
                 <option value="https://login.salesforce.com">Production / Developer</option>
                 <option value="https://test.salesforce.com">Sandbox</option>
+                <option value="__custom__">Custom domain (My Domain)…</option>
               </select>
+              {!KNOWN_HOSTS.includes(form.loginUrl) && (
+                <input
+                  type="text"
+                  placeholder="https://your-domain.my.salesforce.com"
+                  value={form.loginUrl}
+                  autoComplete="off"
+                  onChange={(e) => update('loginUrl', e.target.value)}
+                />
+              )}
               <input
                 type="text"
                 placeholder="Username (user@example.com)"
@@ -149,7 +165,7 @@ export default function ConnectionPanel({ side, status, oauthEnabled, onChange }
               {busy ? 'Connecting…' : 'Connect'}
             </button>
             {oauthEnabled && method === 'password' && (
-              <a className="btn" href={`/api/oauth/login/${side}?loginUrl=${encodeURIComponent(form.loginUrl)}`}>
+              <a className="btn" href={`/api/oauth/login/${side}?loginUrl=${encodeURIComponent(cleanUrl(form.loginUrl))}`}>
                 Log in with Salesforce
               </a>
             )}
