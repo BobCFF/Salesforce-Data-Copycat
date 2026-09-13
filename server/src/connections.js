@@ -70,6 +70,22 @@ export function listConnections(req) {
   return Object.entries(store(req)).map(([id, creds]) => connectionSummary(id, creds));
 }
 
+// Raw id→credentials map (includes secrets) — for encrypted export only.
+export function rawConnections(req) {
+  return store(req);
+}
+
+// True if a credentials object matches one already stored (same org login).
+export function findDuplicate(req, creds) {
+  const s = store(req);
+  return Object.values(s).some(
+    (c) =>
+      c.instanceUrl === creds.instanceUrl &&
+      (c.userInfo?.username || null) === (creds.userInfo?.username || null) &&
+      c.method === creds.method,
+  );
+}
+
 export function rolesView(req) {
   const r = roles(req);
   return { source: r.source || null, target: r.target || null };

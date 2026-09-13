@@ -29,6 +29,8 @@ export const api = {
   createConnection: (payload) => request('POST', '/api/connect', payload),
   setRoles: ({ source, target }) => request('POST', '/api/connections/roles', { source, target }),
   removeConnection: (id) => request('DELETE', `/api/connections/${id}`),
+  exportConnections: ({ passphrase, ids } = {}) => request('POST', '/api/connections/export', { passphrase, ids }),
+  importConnections: ({ passphrase, envelope }) => request('POST', '/api/connections/import', { passphrase, envelope }),
   logout: () => request('POST', '/api/disconnect'),
   swapConnections: () => request('POST', '/api/connections/swap'),
 
