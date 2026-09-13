@@ -14,7 +14,10 @@ import {
   listConnections,
   rolesView,
   statusView,
+  rawConnections,
+  findDuplicate,
 } from '../connections.js';
+import { encryptExport, decryptExport } from '../portable.js';
 
 const router = express.Router();
 
@@ -148,6 +151,57 @@ router.delete('/connections/:id', async (req, res) => {
   removeConnection(req, req.params.id);
   await req.session.save();
   res.json(connectionsPayload(req));
+});
+
+// -------- Encrypted export / import --------
+
+// Export connections as a passphrase-encrypted envelope. Optionally limit to
+// specific ids; defaults to all saved connections.
+router.post('/connections/export', (req, res) => {
+  const { passphrase, ids } = req.body || {};
+  const all = rawConnections(req);
+  const wanted = Array.isArray(ids) && ids.length ? ids : Object.keys(all);
+  const payload = wanted
+    .filter((id) => all[id])
+    .map((id) => all[id]);
+  if (!payload.length) {
+    return res.status(400).json({ error: 'There are no connections to export.' });
+  }
+  try {
+    const envelope = encryptExport(payload, passphrase);
+    res.json(envelope);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// Import connections from an encrypted envelope. Skips exact duplicates and
+// auto-assigns source/target only if those roles are currently empty.
+router.post('/connections/import', async (req, res) => {
+  const { passphrase, envelope } = req.body || {};
+  let creds;
+  try {
+    creds = decryptExport(envelope, passphrase);
+  } catch (err) {
+    return res.status(err.status || 400).json({ error: err.message });
+  }
+  let added = 0;
+  let skipped = 0;
+  for (const c of creds) {
+    if (!c || typeof c !== 'object' || !c.instanceUrl) {
+      skipped += 1;
+      continue;
+    }
+    if (findDuplicate(req, c)) {
+      skipped += 1;
+      continue;
+    }
+    const id = addConnection(req, c);
+    autoAssignRole(req, id);
+    added += 1;
+  }
+  await req.session.save();
+  res.json({ added, skipped, ...connectionsPayload(req) });
 });
 
 // Log out of everything.

@@ -470,6 +470,15 @@ input, select, textarea {
 .role-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .add-conn { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
 .add-conn h4 { margin: 0 0 8px; }
+.backup-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.backup-section h4 { margin: 0 0 8px; }
+.backup-form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.backup-form input[type="password"], .backup-form input[type="file"] {
+  padding: 4px 6px; border: 1px solid var(--border); border-radius: 2px;
+  font: inherit; background: var(--input-bg); color: var(--text);
+}
+.backup-form .btn { align-self: flex-start; }
+.backup-ok { color: var(--ok); font-size: 12px; }
 .btn.danger { color: var(--fail); border-color: var(--fail); background: none; }
 .btn.danger:hover { background: var(--fail); color: #fff; }
 
