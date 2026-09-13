@@ -495,9 +495,9 @@ input, select, textarea {
 
 /* ---------- Settings drawer ---------- */
 .drawer {
-  margin-left: auto; height: 100%; width: 380px; max-width: 92vw;
-  background: var(--pane); border-left: 1px solid var(--border-dark);
-  display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,0.25);
+  margin-right: auto; height: 100%; width: 380px; max-width: 92vw;
+  background: var(--pane); border-right: 1px solid var(--border-dark);
+  display: flex; flex-direction: column; box-shadow: 4px 0 16px rgba(0,0,0,0.25);
 }
 .drawer .modal-head { border-radius: 0; }
 .drawer-body { overflow: auto; padding: 12px 14px; }
