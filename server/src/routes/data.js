@@ -4,6 +4,7 @@ import {
   describeSObject,
   buildSoql,
   runQuery,
+  validateSoql,
   prepareRecords,
   loadRecords,
 } from '../salesforce.js';
@@ -57,6 +58,15 @@ router.post(
   route(async (req) => {
     if (!isValidSide(req.params.side)) throw httpError(400, 'Invalid side.');
     return { soql: buildSoql(req.body || {}) };
+  })
+);
+
+// Check a raw SOQL statement's syntax/semantics without running it.
+router.post(
+  '/:side/soql/validate',
+  route(async (req) => {
+    const conn = requireConnection(req, req.params.side);
+    return validateSoql(conn, (req.body || {}).soql);
   })
 );
 
