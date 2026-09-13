@@ -302,6 +302,13 @@ input, select, textarea {
 
 /* ---------- SOQL editor ---------- */
 .soql-editor { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.soql-actions {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 6px 8px; border-bottom: 1px solid var(--cell-border); background: var(--chrome);
+}
+.soql-check { font-size: 11px; }
+.soql-check.ok { color: var(--ok); }
+.soql-check.bad { color: var(--fail); }
 .soql-editor-hint { padding: 6px 8px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--cell-border); }
 .soql-editor-hint kbd {
   background: var(--chrome-dark); border: 1px solid var(--border); border-radius: 3px;

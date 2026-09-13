@@ -57,14 +57,34 @@ function caretCoords(ta, mirror, pos) {
   return { top, left };
 }
 
-export default function SoqlEditor({ value, onChange, meta, objects = [], onRun, running, canRun }) {
+export default function SoqlEditor({ value, onChange, meta, objects = [], onRun, onCheck, running, canRun }) {
   const taRef = useRef(null);
   const mirrorRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [active, setActive] = useState(0);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [checking, setChecking] = useState(false);
+  const [check, setCheck] = useState(null); // { valid, text }
   const tokenRef = useRef({ start: 0, end: 0 });
+
+  async function runCheck() {
+    if (!onCheck || checking) return;
+    setChecking(true);
+    setCheck(null);
+    try {
+      const res = await onCheck(value.trim());
+      setCheck(
+        res?.valid
+          ? { valid: true, text: 'Valid SOQL — the query parsed against the org.' }
+          : { valid: false, text: res?.error || 'Invalid SOQL.' },
+      );
+    } catch (err) {
+      setCheck({ valid: false, text: err.message });
+    } finally {
+      setChecking(false);
+    }
+  }
 
   const fieldNames = useMemo(() => (meta?.fields || []).map((f) => ({ name: f.name, detail: f.type })), [meta]);
   const objectNames = useMemo(() => objects.map((o) => o.name), [objects]);
@@ -178,6 +198,19 @@ export default function SoqlEditor({ value, onChange, meta, objects = [], onRun,
 
   return (
     <div className="soql-editor">
+      <div className="soql-actions">
+        <button className="btn small primary" onClick={onRun} disabled={!canRun || running}>
+          {running ? 'Running…' : '▶ Run'}
+        </button>
+        <button className="btn small" onClick={runCheck} disabled={!value.trim() || checking}>
+          {checking ? 'Checking…' : '✓ Check syntax'}
+        </button>
+        {check && (
+          <span className={`soql-check ${check.valid ? 'ok' : 'bad'}`}>
+            {check.valid ? '✓ ' : '✕ '}{check.text}
+          </span>
+        )}
+      </div>
       <div className="soql-editor-hint">
         Type to autocomplete fields, objects, keywords and functions. <kbd>Ctrl</kbd>+<kbd>Space</kbd> to
         re-open · <kbd>Tab</kbd>/<kbd>Enter</kbd> to insert · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run.
@@ -189,7 +222,7 @@ export default function SoqlEditor({ value, onChange, meta, objects = [], onRun,
           spellCheck={false}
           value={value}
           placeholder="SELECT Id, Name FROM Account WHERE CreatedDate = THIS_MONTH LIMIT 200"
-          onChange={(e) => { onChange(e.target.value); }}
+          onChange={(e) => { onChange(e.target.value); if (check) setCheck(null); }}
           onKeyUp={(e) => {
             // Recompute suggestions on typing / navigation, but not on the keys
             // the dropdown itself handles.

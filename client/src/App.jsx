@@ -424,6 +424,7 @@ export default function App() {
               meta={meta}
               objects={sourceObjects}
               onRun={runQuery}
+              onCheck={(soql) => api.validateSoql('source', soql)}
               running={querying}
               canRun={Boolean(soqlText.trim()) && sourceConnected}
             />

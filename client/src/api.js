@@ -42,6 +42,7 @@ export const api = {
   objects: (side) => request('GET', `/api/${side}/objects`),
   describe: (side, name) => request('GET', `/api/${side}/objects/${name}/describe`),
   query: (side, selection) => request('POST', `/api/${side}/query`, selection),
+  validateSoql: (side, soql) => request('POST', `/api/${side}/soql/validate`, { soql }),
   buildSoql: (side, selection) => request('POST', `/api/${side}/soql`, selection),
   copy: (payload) => request('POST', '/api/copy', payload),
 };

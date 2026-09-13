@@ -270,6 +270,33 @@ export async function runQuery(conn, soql, { useBulk = false, maxRecords = 50000
 }
 
 /**
+ * Validate a SOQL statement against the org WITHOUT fetching rows, using the
+ * Query "explain" plan endpoint. Salesforce parses and semantically checks the
+ * query (object + field names, syntax) and returns a query plan on success, or
+ * a 4xx with a descriptive message on failure.
+ *
+ * @returns {Promise<{valid:boolean, error?:string, cost?:number, plans?:number}>}
+ */
+export async function validateSoql(conn, soql) {
+  const trimmed = String(soql || '').trim();
+  if (!trimmed) return { valid: false, error: 'The query is empty.' };
+  const url = `/services/data/v${config.apiVersion}/query/?explain=${encodeURIComponent(trimmed)}`;
+  try {
+    const res = await conn.request(url);
+    const plans = Array.isArray(res?.plans) ? res.plans : [];
+    return {
+      valid: true,
+      plans: plans.length,
+      cost: plans.length ? plans[0].relativeCost : undefined,
+    };
+  } catch (err) {
+    // jsforce surfaces Salesforce's error array; take the first message.
+    const message = Array.isArray(err) ? err[0]?.message : err?.message;
+    return { valid: false, error: message || 'Invalid SOQL.' };
+  }
+}
+
+/**
  * Strip Salesforce system/read-only attributes from records and keep only the
  * fields that are createable/updateable on the target, plus optional field
  * name remapping (sourceField -> targetField).
