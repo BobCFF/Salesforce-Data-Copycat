@@ -57,7 +57,10 @@ function caretCoords(ta, mirror, pos) {
   return { top, left };
 }
 
-export default function SoqlEditor({ value, onChange, meta, objects = [], onRun, onCheck, running, canRun }) {
+export default function SoqlEditor({
+  value, onChange, meta, objects = [], onRun, onCheck, running, canRun,
+  history = [], onPickHistory, onClearHistory,
+}) {
   const taRef = useRef(null);
   const mirrorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -66,6 +69,7 @@ export default function SoqlEditor({ value, onChange, meta, objects = [], onRun,
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const [checking, setChecking] = useState(false);
   const [check, setCheck] = useState(null); // { valid, text }
+  const [histOpen, setHistOpen] = useState(false);
   const tokenRef = useRef({ start: 0, end: 0 });
 
   async function runCheck() {
@@ -205,6 +209,35 @@ export default function SoqlEditor({ value, onChange, meta, objects = [], onRun,
         <button className="btn small" onClick={runCheck} disabled={!value.trim() || checking}>
           {checking ? 'Checking…' : '✓ Check syntax'}
         </button>
+        <div className="soql-history">
+          <button
+            className="btn small"
+            onClick={() => setHistOpen((o) => !o)}
+            disabled={!history.length}
+            title={history.length ? 'Recently run queries' : 'No query history yet'}
+          >
+            🕘 History{history.length ? ` (${history.length})` : ''} ▾
+          </button>
+          {histOpen && history.length > 0 && (
+            <>
+              <div className="soql-history-overlay" onClick={() => setHistOpen(false)} />
+              <ul className="soql-history-menu">
+                {history.map((q, i) => (
+                  <li
+                    key={i}
+                    title={q}
+                    onClick={() => { onPickHistory?.(q); setHistOpen(false); setCheck(null); }}
+                  >
+                    {q.replace(/\s+/g, ' ').trim()}
+                  </li>
+                ))}
+                <li className="soql-history-clear" onClick={() => { onClearHistory?.(); setHistOpen(false); }}>
+                  Clear history
+                </li>
+              </ul>
+            </>
+          )}
+        </div>
         {check && (
           <span className={`soql-check ${check.valid ? 'ok' : 'bad'}`}>
             {check.valid ? '✓ ' : '✕ '}{check.text}
