@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import jsforce from 'jsforce';
 import config from '../config.js';
@@ -23,6 +24,10 @@ function resolveOAuthApp(req) {
     return { ...config.oauth, source: 'env' };
   }
   return null;
+}
+
+function base64url(buf) {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // Build an OAuth2 helper bound to a login URL and a given app config.
@@ -149,10 +154,19 @@ router.get('/oauth/login/:side', async (req, res) => {
   const { side } = req.params;
   if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
   const loginUrl = req.query.loginUrl || 'https://login.salesforce.com';
-  req.session.oauthPending = { side, loginUrl };
+  // PKCE (S256): required by Connected Apps that enforce Proof Key for Code
+  // Exchange. We keep the verifier in the session and send the challenge now.
+  const codeVerifier = base64url(crypto.randomBytes(32));
+  const codeChallenge = base64url(crypto.createHash('sha256').update(codeVerifier).digest());
+  req.session.oauthPending = { side, loginUrl, codeVerifier };
   await req.session.save();
   const auth = oauth2(loginUrl, app);
-  const url = auth.getAuthorizationUrl({ scope: 'api refresh_token', prompt: 'login' });
+  const url = auth.getAuthorizationUrl({
+    scope: 'api refresh_token',
+    prompt: 'login',
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  });
   res.redirect(url);
 });
 
@@ -161,13 +175,14 @@ router.get('/oauth/callback', async (req, res, next) => {
   if (!app) return res.status(400).send('OAuth is not configured.');
   const pending = req.session.oauthPending;
   if (!pending) return res.status(400).send('No pending OAuth request.');
-  const { side, loginUrl } = pending;
+  const { side, loginUrl, codeVerifier } = pending;
   try {
     const conn = new jsforce.Connection({
       oauth2: oauth2(loginUrl, app),
       version: config.apiVersion,
     });
-    await conn.authorize(req.query.code);
+    // Complete PKCE by sending the stored code_verifier with the token request.
+    await conn.authorize(req.query.code, codeVerifier ? { code_verifier: codeVerifier } : undefined);
     const ident = await conn.identity();
     setCredentials(req, side, {
       instanceUrl: conn.instanceUrl,
