@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { usePersistedState } from './usePersistedState.js';
-import ConnectionPanel from './components/ConnectionPanel.jsx';
+import ConnectionsDialog from './components/ConnectionsDialog.jsx';
 import ObjectTree from './components/ObjectTree.jsx';
 import QueryBuilder from './components/QueryBuilder.jsx';
 import DataGrid from './components/DataGrid.jsx';
@@ -52,6 +52,7 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [showOAuth, setShowOAuth] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showConnections, setShowConnections] = useState(false);
 
   // Source Objects as a full-height side pane (vs. inside the Explorer grid).
   const [treeSidebar, setTreeSidebar] = usePersistedState('sfcopycat.treeSidebar', false);
@@ -231,12 +232,27 @@ export default function App() {
     }
   }
 
+  function resetWorkspace() {
+    setSelectedObject('');
+    setMeta(null);
+    setQueryResult(null);
+    setCopyResult(null);
+  }
+
   async function swapConnections() {
     try {
       await api.swapConnections();
-      setSelectedObject('');
-      setMeta(null);
-      setQueryResult(null);
+      resetWorkspace();
+      await refreshStatus();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function setRole(side, id) {
+    try {
+      await api.setRoles({ [side]: id || null });
+      resetWorkspace();
       await refreshStatus();
     } catch (err) {
       setError(err.message);
@@ -301,32 +317,49 @@ export default function App() {
 
         <div className="app-main">
           <section className="connections">
-            <div className="section-title">
-              Connections
-              <span className="muted small">— connect two orgs, then pick source and target</span>
-              <button className="link" onClick={() => setShowMenu(true)}>Setup help</button>
-            </div>
-            <div className="connbar">
-              <ConnectionPanel
-                side="source"
-                status={status?.source}
-                oauthEnabled={status?.oauthEnabled}
-                onChange={refreshStatus}
-              />
-              <div className="copy-arrow">
-                ➜
-                {(sourceConnected || targetConnected) && (
-                  <button className="btn small swap-btn" onClick={swapConnections} title="Swap source and target">
-                    ⇄ Swap
-                  </button>
-                )}
+            <div className="connbar-row">
+              <div className="conn-picker">
+                <span className={`led ${sourceConnected ? 'on' : 'off'}`} />
+                <label>Source</label>
+                <select
+                  value={status?.roles?.source || ''}
+                  onChange={(e) => setRole('source', e.target.value)}
+                >
+                  <option value="">— none —</option>
+                  {(status?.connections || []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
               </div>
-              <ConnectionPanel
-                side="target"
-                status={status?.target}
-                oauthEnabled={status?.oauthEnabled}
-                onChange={refreshStatus}
-              />
+
+              <button
+                className="btn small swap-btn"
+                onClick={swapConnections}
+                title="Swap source and target"
+                disabled={!status?.roles?.source && !status?.roles?.target}
+              >
+                ⇄
+              </button>
+
+              <div className="conn-picker">
+                <span className={`led ${targetConnected ? 'on' : 'off'}`} />
+                <label>Target</label>
+                <select
+                  value={status?.roles?.target || ''}
+                  onChange={(e) => setRole('target', e.target.value)}
+                >
+                  <option value="">— none —</option>
+                  {(status?.connections || []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <span className="spacer" />
+
+              <button className="btn small" onClick={() => setShowConnections(true)}>
+                ⚙ Manage connections…
+              </button>
             </div>
           </section>
 
@@ -449,6 +482,14 @@ export default function App() {
         />
       )}
 
+      {showConnections && (
+        <ConnectionsDialog
+          status={status}
+          onClose={() => setShowConnections(false)}
+          onChange={refreshStatus}
+        />
+      )}
+
       {showOAuth && (
         <OAuthSettings onClose={() => setShowOAuth(false)} onChange={refreshStatus} />
       )}
@@ -463,6 +504,7 @@ export default function App() {
           treeSidebar={treeSidebar}
           setTreeSidebar={setTreeSidebar}
           onOpenOAuth={() => { setShowMenu(false); setShowOAuth(true); }}
+          onManageConnections={() => { setShowMenu(false); setShowConnections(true); }}
           onLogout={logout}
           connected={sourceConnected || targetConnected}
         />

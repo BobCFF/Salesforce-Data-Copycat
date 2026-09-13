@@ -6,8 +6,13 @@ import { loginWithPassword, loginWithToken } from '../salesforce.js';
 import {
   SIDES,
   isValidSide,
-  setCredentials,
-  clearCredentials,
+  addConnection,
+  removeConnection,
+  autoAssignRole,
+  setRoles,
+  swapRoles,
+  listConnections,
+  rolesView,
   statusView,
 } from '../connections.js';
 
@@ -40,18 +45,27 @@ function oauth2(loginUrl, app) {
   });
 }
 
-// Overall status of both connections.
-router.get('/status', (req, res) => {
-  res.json({
+// The full connections + roles + status payload the client needs.
+function connectionsPayload(req) {
+  return {
     oauthEnabled: Boolean(resolveOAuthApp(req)),
+    connections: listConnections(req),
+    roles: rolesView(req),
     source: statusView(req, 'source'),
     target: statusView(req, 'target'),
-  });
+  };
+}
+
+router.get('/status', (req, res) => {
+  res.json(connectionsPayload(req));
+});
+
+router.get('/connections', (req, res) => {
+  res.json({ connections: listConnections(req), roles: rolesView(req) });
 });
 
 // -------- OAuth Connected App configuration (stored in the session) --------
 
-// Non-sensitive summary of the current OAuth app config (never returns the secret).
 router.get('/oauth/config', (req, res) => {
   const app = resolveOAuthApp(req);
   res.json({
@@ -63,7 +77,6 @@ router.get('/oauth/config', (req, res) => {
   });
 });
 
-// Save the Connected App config into the session (client id + secret + redirect URI).
 router.post('/oauth/config', async (req, res) => {
   const { clientId, clientSecret, redirectUri } = req.body || {};
   if (!clientId || !clientSecret || !redirectUri) {
@@ -78,19 +91,17 @@ router.post('/oauth/config', async (req, res) => {
   res.json({ configured: true, source: 'session', clientId: req.session.oauthApp.clientId, redirectUri: req.session.oauthApp.redirectUri, hasSecret: true });
 });
 
-// Forget the session OAuth config.
 router.post('/oauth/config/clear', async (req, res) => {
   delete req.session.oauthApp;
   await req.session.save();
   res.json({ configured: Boolean(resolveOAuthApp(req)) });
 });
 
-// Username/password (+ security token) or access-token login for a side.
-router.post('/connect/:side', async (req, res, next) => {
-  const { side } = req.params;
-  if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
+// -------- Connections (named org logins) --------
 
-  const { method = 'password' } = req.body || {};
+// Create a connection via username/password (+ token) or an access token.
+router.post('/connect', async (req, res) => {
+  const { method = 'password', role, label } = req.body || {};
   try {
     let creds;
     if (method === 'token') {
@@ -106,59 +117,58 @@ router.post('/connect/:side', async (req, res, next) => {
       }
       creds = await loginWithPassword({ loginUrl, username, password, securityToken });
     }
-    setCredentials(req, side, creds);
+    creds.method = method;
+    if (label) creds.label = String(label).trim();
+    const id = addConnection(req, creds);
+    if (role && SIDES.includes(role)) setRoles(req, { [role]: id });
+    else autoAssignRole(req, id);
     await req.session.save();
-    res.json({ side, ...statusView(req, side) });
+    res.json({ id, ...connectionsPayload(req) });
   } catch (err) {
-    // Surface Salesforce login errors clearly without leaking secrets.
-    const message = err?.message || 'Login failed.';
-    res.status(401).json({ error: message });
+    res.status(401).json({ error: err?.message || 'Login failed.' });
   }
 });
 
-router.post('/disconnect/:side', async (req, res) => {
-  const { side } = req.params;
-  if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
-  clearCredentials(req, side);
+// Assign source/target roles.
+router.post('/connections/roles', async (req, res) => {
+  const { source, target } = req.body || {};
+  setRoles(req, { source, target });
   await req.session.save();
-  res.json({ side, connected: false });
+  res.json(connectionsPayload(req));
 });
 
+router.post('/connections/swap', async (req, res) => {
+  swapRoles(req);
+  await req.session.save();
+  res.json(connectionsPayload(req));
+});
+
+// Remove a connection.
+router.delete('/connections/:id', async (req, res) => {
+  removeConnection(req, req.params.id);
+  await req.session.save();
+  res.json(connectionsPayload(req));
+});
+
+// Log out of everything.
 router.post('/disconnect', (req, res) => {
-  for (const side of SIDES) clearCredentials(req, side);
-  // iron-session: destroy() clears the data and sends an expired cookie.
   req.session.destroy();
   res.json({ ok: true });
 });
 
-// Swap which connected org is the source and which is the target.
-router.post('/connections/swap', async (req, res) => {
-  const orgs = req.session.orgs || {};
-  const source = orgs.source;
-  const target = orgs.target;
-  req.session.orgs = { ...orgs };
-  if (target) req.session.orgs.source = target;
-  else delete req.session.orgs.source;
-  if (source) req.session.orgs.target = source;
-  else delete req.session.orgs.target;
-  await req.session.save();
-  res.json({ source: statusView(req, 'source'), target: statusView(req, 'target') });
-});
+// -------- OAuth2 web-server flow --------
 
-// -------- OAuth2 web-server flow (optional) --------
-
-// Kick off OAuth for a side. Requires a Connected App to be configured.
-router.get('/oauth/login/:side', async (req, res) => {
+// Kick off OAuth to create a connection (optionally assigned to a role).
+router.get('/oauth/login', async (req, res) => {
   const app = resolveOAuthApp(req);
   if (!app) return res.status(400).json({ error: 'OAuth is not configured. Add a Connected App in OAuth settings first.' });
-  const { side } = req.params;
-  if (!isValidSide(side)) return res.status(400).json({ error: 'Invalid side.' });
   const loginUrl = req.query.loginUrl || 'https://login.salesforce.com';
-  // PKCE (S256): required by Connected Apps that enforce Proof Key for Code
-  // Exchange. We keep the verifier in the session and send the challenge now.
+  const role = SIDES.includes(req.query.role) ? req.query.role : null;
+  const label = req.query.label ? String(req.query.label) : '';
+  // PKCE (S256) — required by Connected Apps that enforce Proof Key for Code Exchange.
   const codeVerifier = base64url(crypto.randomBytes(32));
   const codeChallenge = base64url(crypto.createHash('sha256').update(codeVerifier).digest());
-  req.session.oauthPending = { side, loginUrl, codeVerifier };
+  req.session.oauthPending = { loginUrl, role, label, codeVerifier };
   await req.session.save();
   const auth = oauth2(loginUrl, app);
   const url = auth.getAuthorizationUrl({
@@ -175,22 +185,21 @@ router.get('/oauth/callback', async (req, res, next) => {
   if (!app) return res.status(400).send('OAuth is not configured.');
   const pending = req.session.oauthPending;
   if (!pending) return res.status(400).send('No pending OAuth request.');
-  const { side, loginUrl, codeVerifier } = pending;
+  const { loginUrl, role, label, codeVerifier } = pending;
   try {
     const conn = new jsforce.Connection({
       oauth2: oauth2(loginUrl, app),
       version: config.apiVersion,
     });
-    // Complete PKCE by sending the stored code_verifier with the token request.
     await conn.authorize(req.query.code, codeVerifier ? { code_verifier: codeVerifier } : undefined);
     const ident = await conn.identity();
-    setCredentials(req, side, {
+    const id = addConnection(req, {
+      method: 'oauth',
+      label: label || ident.username,
       instanceUrl: conn.instanceUrl,
       accessToken: conn.accessToken,
       refreshToken: conn.refreshToken,
       loginUrl,
-      // Store the app config with the connection so token refresh works later,
-      // independent of env vars.
       oauth: { clientId: app.clientId, clientSecret: app.clientSecret, redirectUri: app.redirectUri },
       userInfo: {
         id: ident.user_id,
@@ -200,12 +209,12 @@ router.get('/oauth/callback', async (req, res, next) => {
         url: conn.instanceUrl,
       },
     });
+    if (role && SIDES.includes(role)) setRoles(req, { [role]: id });
+    else autoAssignRole(req, id);
     delete req.session.oauthPending;
     await req.session.save();
-    // Redirect back to the SPA. On a single-origin (serverless) deploy this is
-    // the site root; in split dev it is the configured client origin.
     const target = config.isServerless ? '' : config.clientOrigins[0] || '';
-    res.redirect(`${target}/?connected=${side}`);
+    res.redirect(`${target}/?connected=1`);
   } catch (err) {
     next(err);
   }

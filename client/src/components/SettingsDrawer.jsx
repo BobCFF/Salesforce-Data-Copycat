@@ -11,6 +11,7 @@ export default function SettingsDrawer({
   treeSidebar,
   setTreeSidebar,
   onOpenOAuth,
+  onManageConnections,
   onLogout,
   connected,
 }) {
@@ -61,14 +62,16 @@ export default function SettingsDrawer({
           {/* -------- Connections -------- */}
           <section className="drawer-section">
             <h3>Connections</h3>
+            <button className="btn block" onClick={onManageConnections}>🔌 Manage connections…</button>
             <button className="btn block" onClick={onOpenOAuth}>⚙ Configure OAuth (Connected App)…</button>
             {connected && (
               <button className="btn block" onClick={() => { onClose(); onLogout(); }}>Log out all connections</button>
             )}
 
             <p className="drawer-hint">
-              Connect a <strong>source</strong> and a <strong>target</strong> org, then use <strong>⇄ Swap</strong> to
-              reassign which is which. Pick the login method that matches your org's security.
+              Save each org once in <strong>Manage connections…</strong>, then pick which saved connection is the
+              <strong> source</strong> and which is the <strong>target</strong> from the row on the main page (or use
+              <strong> ⇄ Swap</strong>). Pick the login method that matches your org's security.
             </p>
 
             <details className="help">
